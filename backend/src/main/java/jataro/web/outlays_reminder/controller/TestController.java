@@ -18,6 +18,7 @@ public final class TestController {
 		jsonResponse.put("message", "Hello, World!");
 		jsonResponse.put("status", "success");
 		jsonResponse.put("data", new String[] {"item1", "item2", "item3"});
+		System.out.println(jsonResponse);
 		return ResponseEntity.ok(jsonResponse);
 	}
 }
