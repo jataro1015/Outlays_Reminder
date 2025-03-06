@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.util.StringUtils;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -19,6 +20,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "outlays") // テーブル名をoutlaysに指定
+@JsonPropertyOrder({"item", "amount"}) // JsonPropertyOrder アノテーションを追加
 @Getter
 @Setter
 public final class Outlay {
@@ -44,7 +46,7 @@ public final class Outlay {
 	}
 	
 	public static Outlay create(final String item, final Integer amount) {
-		if(StringUtils.hasText(item)) {
+		if(!StringUtils.hasText(item)) {
 			throw new IllegalArgumentException("費目には、1文字以上の空白以外の文字を必ず入力してください。");
 		}
 		if(amount == null || amount <= 0) {
@@ -55,7 +57,6 @@ public final class Outlay {
 		}
 		
 		//JSON 形式のデータを作成(Jackson)
-		
 		final var om = new ObjectMapper();
 		final Map<String, Object> outlayDataMap = Map.of("item", item, "amount", amount);
 		String outlayDataJson;
