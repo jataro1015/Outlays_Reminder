@@ -1,6 +1,7 @@
 package jataro.web.outlays_reminder.entity;
 
 import java.time.temporal.ValueRange;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.util.StringUtils;
@@ -20,7 +21,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "outlays") // テーブル名をoutlaysに指定
-@JsonPropertyOrder({"item", "amount"}) // JsonPropertyOrder アノテーションを追加
+@JsonPropertyOrder({"item", "amount"}) // JSONシリアライズ時のプロパティの順序を保証する
 @Getter
 @Setter
 public final class Outlay {
@@ -58,7 +59,9 @@ public final class Outlay {
 		
 		//JSON 形式のデータを作成(Jackson)
 		final var om = new ObjectMapper();
-		final Map<String, Object> outlayDataMap = Map.of("item", item, "amount", amount);
+		final Map<String, Object> outlayDataMap = new LinkedHashMap<>();
+		outlayDataMap.put("item", item);
+		outlayDataMap.put("amount", amount);
 		String outlayDataJson;
 		try {
 			outlayDataJson = om.writeValueAsString(outlayDataMap);
