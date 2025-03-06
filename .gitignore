@@ -1,2 +1,6 @@
 ### Spring ###
 application.properties
+
+### H2 Database ###
+outlays.mv.db
+outlays.trace.db
