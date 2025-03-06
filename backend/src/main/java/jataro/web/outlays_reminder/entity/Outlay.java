@@ -56,6 +56,12 @@ public final class Outlay {
 		if(!ValueRange.of(amount, amount).isIntValue()) {
 			throw new IllegalArgumentException("もう少し小さい数値を入力してください。");
 		}
+	
+		return new Outlay(createJsonAsString(item, amount));
+	}
+	
+	
+	public static final String createJsonAsString(final String item, final Integer amount){
 		
 		//JSON 形式のデータを作成(Jackson)
 		final var om = new ObjectMapper();
@@ -69,6 +75,6 @@ public final class Outlay {
 			throw new IllegalArgumentException("JSONデータ作成に失敗しました。", jpe);
 		}
 		
-		return new Outlay(outlayDataJson);
+		return outlayDataJson;
 	}
 }
