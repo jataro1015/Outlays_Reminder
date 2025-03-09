@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,10 +34,9 @@ public final class OutlayController {
 		final Integer amount = (Integer) requestBody.get("amount");
 		
 		try {
-			 
-			Outlay outlay = Outlay.create(item, amount);
-			Outlay savedOutlay = outlayRepository.save(outlay);
-			return ResponseEntity.ok(savedOutlay);
+			final Outlay outlay = Outlay.create(item, amount);
+			final Outlay savedOutlay = outlayRepository.save(outlay);
+			return ResponseEntity.ok("REGISTERED: " + savedOutlay);
 			
 		} catch (IllegalArgumentException e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
@@ -44,8 +44,7 @@ public final class OutlayController {
 	}
 	
 	@GetMapping("/{id}")
-	public ResponseEntity<?> 
-	getOutlayById(@PathVariable("id") final Integer id){
+	public ResponseEntity<?> getOutlayById(@PathVariable("id") final Integer id){
 		final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
         if (existingOutlay.isEmpty()) {
             return new ResponseEntity<>("指定されたIDの出費データは存在しません。", 
@@ -55,12 +54,13 @@ public final class OutlayController {
 	}
 	
 	@PutMapping("/{id}")
-	public ResponseEntity<?> 
-	updateOutlay(@PathVariable("id") final Integer id, 
+	public ResponseEntity<?> updateOutlay(@PathVariable("id") final Integer id, 
 				 @RequestBody final Map<String, Object> requestBody) {
 		final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
         if (existingOutlay.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404 Not Found を返す
+            return new ResponseEntity<>(
+            		"更新に失敗しました。指定されたIDの出費データは存在しません。", 
+            		HttpStatus.NOT_FOUND); // 404 Not Found を返す
         }
 
         try {
@@ -72,11 +72,27 @@ public final class OutlayController {
             outlayToUpdate.setOutlayData(validatedOutlay.getOutlayData()); 
             outlayRepository.save(outlayToUpdate); 
             
-            return new ResponseEntity<>(outlayToUpdate, HttpStatus.OK); // 200 OK と更新後の Outlay オブジェクトを返す
+            return new ResponseEntity<>("UPDATED: " + outlayToUpdate, 
+            		HttpStatus.OK); // 200 OK と更新後の Outlay オブジェクトを返す
             
         } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST); // 400 Bad Request とエラーメッセージを返す
+            return new ResponseEntity<>(
+            		"更新に失敗してしまいました。削除したい出費データを今一度確認してください。", 
+            		HttpStatus.BAD_REQUEST); // 400 Bad Request とエラーメッセージを返す
         }
         
+	}
+	
+	@DeleteMapping("/{id}")
+	public ResponseEntity<?> deleteOutlay(@PathVariable("id") final Integer id) {
+		if(!outlayRepository.existsById(id)) {
+			return new ResponseEntity<>(
+					"削除に失敗しました。指定されたIDの出費データは存在しません。", 
+					HttpStatus.NOT_FOUND); // 404 Not Found
+		}
+		
+		outlayRepository.deleteById(id);
+		
+	    return new ResponseEntity<>("DELETED: id=" + id, HttpStatus.OK);	
 	}
 }
