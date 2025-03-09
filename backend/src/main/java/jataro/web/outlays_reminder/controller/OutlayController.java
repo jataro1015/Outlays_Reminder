@@ -1,13 +1,11 @@
 package jataro.web.outlays_reminder.controller;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -26,16 +24,6 @@ public final class OutlayController {
 	private OutlayRepository outlayRepository;
 	
 	private OutlayController() {}
-	
-	@GetMapping("/test")
-	public ResponseEntity<Map<String, Object>> getSampleJson(){
-		final Map<String, Object> jsonResponse = new HashMap<>();
-		jsonResponse.put("message", "Hello, World!");
-		jsonResponse.put("status", "success");
-		jsonResponse.put("data", new String[] {"item1", "item2", "item3"});
-		System.out.println(jsonResponse);
-		return ResponseEntity.ok(jsonResponse);
-	}
 	
 	@PostMapping
 	public ResponseEntity<?> registerOutlay(@RequestBody Map<String, Object> requestBody) {
