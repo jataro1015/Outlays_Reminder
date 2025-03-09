@@ -47,21 +47,20 @@ public final class Outlay {
 	}
 	
 	public static Outlay create(final String item, final Integer amount) {
-		if(!StringUtils.hasText(item)) {
-			throw new IllegalArgumentException("費目には、1文字以上の空白以外の文字を必ず入力してください。");
+		
+		if(!StringUtils.hasText(item) && item.length() > 50) {
+			throw new IllegalArgumentException(
+					"費目には1字～50字で、文字を必ず入力してください。また、空白のみの入力も許可されません。");
+		}	
+		if(amount == null || !ValueRange.of(0, 1000000).isValidValue(amount)) {
+			throw new IllegalArgumentException("金額は、0円～100万円の範囲で入力してください。");
 		}
-		if(amount == null || amount <= 0) {
-			throw new IllegalArgumentException("金額は1以上の数値を入力してください。");
-		}
-		if(!ValueRange.of(amount, amount).isIntValue()) {
-			throw new IllegalArgumentException("もう少し小さい数値を入力してください。");
-		}
-	
+		
 		return new Outlay(createJsonAsString(item, amount));
 	}
 	
 	
-	public static final String createJsonAsString(final String item, final Integer amount){
+	private static final String createJsonAsString(final String item, final Integer amount){
 		
 		//JSON 形式のデータを作成(Jackson)
 		final var om = new ObjectMapper();
