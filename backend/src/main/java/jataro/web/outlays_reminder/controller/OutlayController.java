@@ -43,7 +43,7 @@ public final class OutlayController {
 		final Integer amount = (Integer) requestBody.get("amount");
 		
 		try {
-			
+			 
 			Outlay outlay = Outlay.create(item, amount);
 			Outlay savedOutlay = outlayRepository.save(outlay);
 			return ResponseEntity.ok(savedOutlay);
@@ -51,6 +51,16 @@ public final class OutlayController {
 		} catch (IllegalArgumentException e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
 		}
+	}
+	
+	@GetMapping("/{id}")
+	public ResponseEntity<?> getOutlayById(@PathVariable("id") Integer id){
+		final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
+        if (existingOutlay.isEmpty()) {
+            return new ResponseEntity<>("指定されたIDの出費データは存在しません。", 
+            		HttpStatus.NOT_FOUND); // 404 Not Found を返す
+        }
+		return new ResponseEntity<>(existingOutlay.get(), HttpStatus.OK);
 	}
 	
 	@PutMapping("/{id}")
