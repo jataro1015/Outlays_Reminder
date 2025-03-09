@@ -47,7 +47,6 @@ public final class Outlay {
 	}
 	
 	public static Outlay create(final String item, final Integer amount) {
-		
 		if(!StringUtils.hasText(item) && item.length() > 50) {
 			throw new IllegalArgumentException(
 					"費目には1字～50字で、文字を必ず入力してください。また、空白のみの入力も許可されません。");
@@ -58,7 +57,6 @@ public final class Outlay {
 		
 		return new Outlay(createJsonAsString(item, amount));
 	}
-	
 	
 	private static final String createJsonAsString(final String item, final Integer amount){
 		
