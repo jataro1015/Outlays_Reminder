@@ -47,13 +47,15 @@ public final class Outlay {
 	}
 	
 	public static Outlay create(final String item, final Integer amount) {
-		if(!StringUtils.hasText(item) && item.length() > 50) {
-			throw new IllegalArgumentException(
-					"費目には1字～50字で、文字を必ず入力してください。また、空白のみの入力も許可されません。");
-		}	
-		if(amount == null || !ValueRange.of(0, 1000000).isValidValue(amount)) {
-			throw new IllegalArgumentException("金額は、0円～100万円の範囲で入力してください。");
-		}
+	    if(!StringUtils.hasText(item)) {
+	        throw new IllegalArgumentException("費目には、1文字以上の文字を入力してください。空白のみの入力は許可されません。");
+	    }
+	    if (item.length() > 50) {
+	        throw new IllegalArgumentException("費目は50文字以内で入力してください。");
+	    }
+	    if(amount == null || !ValueRange.of(0, 1000000).isValidValue(amount)) {
+	        throw new IllegalArgumentException("金額は、0円～100万円の範囲で入力してください。");
+	    }
 		
 		return new Outlay(createJsonAsString(item, amount));
 	}
