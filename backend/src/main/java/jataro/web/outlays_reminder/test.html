@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outlays Reminder</title>
+</head>
+<body>
+    <h1>Outlays Reminder</h1>
+    <p>This is a test HTML file.</p>
+    <div id="outlayData"></div>
+    
+    <script>
+        fetch('http://localhost:8080/api/v1/outlays/27')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.outlayData) {
+                    document.getElementById('outlayData').textContent = "Error: outlayData not found in response.";
+                    return;
+                }
+        
+                try {
+                    const outlayDataParsed = JSON.parse(data.outlayData);
+                    if (outlayDataParsed.item) {
+                        document.getElementById('outlayData').textContent = outlayDataParsed.item;
+                    } else {
+                        document.getElementById('outlayData').textContent = "Error: item property not found in outlayData.";
+                    }
+                } catch (parseError) {
+                    document.getElementById('outlayData').textContent = "Error: Failed to parse outlayData as JSON. " + parseError;
+                }
+            })
+            .catch(error => {
+                document.getElementById('outlayData').textContent = "Error: " + error;
+            });
+        
+    </script>
+</body>
+</html>
