@@ -1,10 +1,12 @@
 package jataro.web.outlays_reminder.entity;
 
+import java.nio.charset.StandardCharsets;
 import java.time.temporal.ValueRange;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.HtmlUtils;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -30,6 +32,13 @@ public final class Outlay {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 	
+	/**
+	 * 出費データをJSON形式で保存するためのString フィールドです。
+	 * 出費データを表すJSONデータは、{@link #createJsonAsString(String, Integer)} 
+	 * によってString型に変換され、このフィールドに格納されます。
+	 * <br> 格納されるJSONデータのプロパティは、{@code item} と {@code amount} であり、
+	 * {@code item} は出費項目を表す文字列、 {@code amount} は金額を表す整数値です。
+	 */
 	@Lob // JSON型カラムをStringで扱う場合はこれを付与
 	private String outlayData; // カラム名 outlay_dataに対応
 	
@@ -47,17 +56,13 @@ public final class Outlay {
 	}
 	
 	public static Outlay create(final String item, final Integer amount) {
-	    if(!StringUtils.hasText(item)) {
-	        throw new IllegalArgumentException("費目には、1文字以上の文字を入力してください。空白のみの入力は許可されません。");
-	    }
-	    if (item.length() > 50) {
-	        throw new IllegalArgumentException("費目は50文字以内で入力してください。");
-	    }
-	    if(amount == null || !ValueRange.of(0, 1000000).isValidValue(amount)) {
-	        throw new IllegalArgumentException("金額は、0円～100万円の範囲で入力してください。");
-	    }
+        validateItem(item);
+        validateAmount(amount);
 		
-		return new Outlay(createJsonAsString(item, amount));
+	    final String escapedItem = 
+	    		HtmlUtils.htmlEscape(item, StandardCharsets.UTF_8.name());
+	    
+        return new Outlay(createJsonAsString(escapedItem, amount));
 	}
 	
 	private static final String createJsonAsString(final String item, final Integer amount){
@@ -76,4 +81,19 @@ public final class Outlay {
 		
 		return outlayDataJson;
 	}
+	
+    private static void validateItem(final String item) {
+        if(!StringUtils.hasText(item)) {
+            throw new IllegalArgumentException("費目には、1文字以上の文字を入力してください。空白のみの入力は許可されません。");
+        }
+        if (item.length() > 50) {
+            throw new IllegalArgumentException("費目は50文字以内で入力してください。");
+        }
+    }
+
+    private static void validateAmount(final Integer amount) {
+        if(amount == null || !ValueRange.of(0, 1000000).isValidValue(amount)) {
+            throw new IllegalArgumentException("金額は、0円～100万円の範囲で入力してください。");
+        }
+    }
 }
