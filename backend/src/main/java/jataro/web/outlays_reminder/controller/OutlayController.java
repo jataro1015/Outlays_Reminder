@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +21,7 @@ import jataro.web.outlays_reminder.repository.OutlayRepository;
 
 @RestController
 @RequestMapping("/api/v1/outlays")
+@CrossOrigin
 public final class OutlayController {
 	
 	@Autowired
@@ -36,7 +38,8 @@ public final class OutlayController {
 		try {
 			final Outlay outlay = Outlay.create(item, amount);
 			final Outlay savedOutlay = outlayRepository.save(outlay);
-			return ResponseEntity.ok("REGISTERED: " + savedOutlay);
+			return ResponseEntity.ok("REGISTERED: id=" + savedOutlay.getId() + 
+					", " + savedOutlay.getOutlayData());
 			
 		} catch (IllegalArgumentException e) {
 			return ResponseEntity.badRequest().body(e.getMessage());
