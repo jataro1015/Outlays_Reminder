@@ -99,6 +99,7 @@ public final class OutlayController {
 						HttpStatus.NOT_FOUND);
 			}
 			return new ResponseEntity<>(existingOutlay.get(), HttpStatus.OK);
+			
 		} catch (Exception e) {
 			return createErrorResponse("ID指定による出費データ取得中にエラーが発生しました。", 
 					HttpStatus.INTERNAL_SERVER_ERROR, e);
@@ -121,13 +122,12 @@ public final class OutlayController {
 			final Outlay outlayToUpdate = existingOutlay.get(); // Optional から Outlay オブジェクトを取得
 
 			outlayToUpdate.setOutlayData(validatedOutlay.getOutlayData()); 
-			outlayRepository.save(outlayToUpdate); 
+			final Outlay updatedOutlay = outlayRepository.save(outlayToUpdate); 
 
-			return new ResponseEntity<>("UPDATED: id=" + id + ", " + outlayToUpdate, 
-					HttpStatus.OK);
+	        return new ResponseEntity<>(updatedOutlay, HttpStatus.OK);
 
 		}catch (IllegalArgumentException e) {
-			return createErrorResponse("入力値が不正です。", 
+			return createErrorResponse(e.getMessage(), 
 					HttpStatus.BAD_REQUEST, e);
 
 		} catch (ClassCastException e) {
@@ -151,6 +151,7 @@ public final class OutlayController {
 			outlayRepository.deleteById(id);
 
 			return new ResponseEntity<>("DELETED: id=" + id, HttpStatus.OK);
+			
 		} catch (Exception e) {
 			return createErrorResponse("ID指定による出費データ削除中にエラーが発生しました。", 
 					HttpStatus.INTERNAL_SERVER_ERROR, e);
