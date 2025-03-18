@@ -76,13 +76,10 @@ public final class OutlayController {
 			final List<Outlay> outlays = StreamSupport
 					.stream(outlayRepository.findAll().spliterator(), false)
 					.collect(Collectors.toList());
-
-			if(!outlays.isEmpty()) {
-				return new ResponseEntity<>(outlays, HttpStatus.OK);
-			} else {
-				return createErrorResponse("出費データが存在しません", 
-						HttpStatus.NOT_FOUND);
-			}
+			
+			return outlays.isEmpty() 
+					? createErrorResponse("出費データが存在しません", HttpStatus.NOT_FOUND) 
+					: ResponseEntity.ok(outlays);
 
 		} catch (Exception e) {
 			return createErrorResponse("出費データ取得中にエラーが発生しました。", 
@@ -94,11 +91,10 @@ public final class OutlayController {
 	public ResponseEntity<?> getOutlayById(@PathVariable("id") final Integer id){
 		try {
 			final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
-			if (existingOutlay.isEmpty()) {
-				return createErrorResponse("指定されたIDの出費データは存在しません。",
-						HttpStatus.NOT_FOUND);
-			}
-			return new ResponseEntity<>(existingOutlay.get(), HttpStatus.OK);
+			
+	        return existingOutlay.isPresent()
+	        		? ResponseEntity.ok(existingOutlay.get())
+	        		: createErrorResponse("指定されたIDの出費データは存在しません。", HttpStatus.NOT_FOUND);
 			
 		} catch (Exception e) {
 			return createErrorResponse("ID指定による出費データ取得中にエラーが発生しました。", 
@@ -124,7 +120,7 @@ public final class OutlayController {
 			outlayToUpdate.setOutlayData(validatedOutlay.getOutlayData()); 
 			final Outlay updatedOutlay = outlayRepository.save(outlayToUpdate); 
 
-	        return new ResponseEntity<>(updatedOutlay, HttpStatus.OK);
+	        return ResponseEntity.ok(updatedOutlay);
 
 		}catch (IllegalArgumentException e) {
 			return createErrorResponse(e.getMessage(), 
@@ -150,7 +146,7 @@ public final class OutlayController {
 
 			outlayRepository.deleteById(id);
 
-			return new ResponseEntity<>("DELETED: id=" + id, HttpStatus.OK);
+			return ResponseEntity.noContent().build();
 			
 		} catch (Exception e) {
 			return createErrorResponse("ID指定による出費データ削除中にエラーが発生しました。", 
