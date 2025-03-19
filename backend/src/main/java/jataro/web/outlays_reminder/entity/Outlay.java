@@ -2,9 +2,7 @@ package jataro.web.outlays_reminder.entity;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.time.temporal.ValueRange;
 
-import org.springframework.util.StringUtils;
 import org.springframework.web.util.HtmlUtils;
 
 import jakarta.persistence.Column;
@@ -51,27 +49,12 @@ public final class Outlay {
 	}
 	
 	public static Outlay create(final String item, final Integer amount) {
-        validateItem(item);
-        validateAmount(amount);
+//        validateItem(item);
+//        validateAmount(amount);
 		
 	    final String escapedItem = 
 	    		HtmlUtils.htmlEscape(item, StandardCharsets.UTF_8.name());
 	    
         return new Outlay(escapedItem, amount);
 	}
-	
-    private static void validateItem(final String item) {
-        if(!StringUtils.hasText(item)) {
-            throw new IllegalArgumentException("費目には、1文字以上の文字を入力してください。空白のみの入力は許可されません。");
-        }
-        if (item.length() > 50) {
-            throw new IllegalArgumentException("費目は50文字以内で入力してください。");
-        }
-    }
-
-    private static void validateAmount(final Integer amount) {
-        if(amount == null || !ValueRange.of(0, 1000000).isValidValue(amount)) {
-            throw new IllegalArgumentException("金額は、0円～100万円の範囲で入力してください。");
-        }
-    }
 }
