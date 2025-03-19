@@ -3,6 +3,7 @@ package jataro.web.outlays_reminder.controller;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import jakarta.validation.Valid;
+import jataro.web.outlays_reminder.dto.OutlayRequest;
 import jataro.web.outlays_reminder.entity.Outlay;
 import jataro.web.outlays_reminder.repository.OutlayRepository;
 
@@ -39,12 +44,18 @@ public final class OutlayController {
 
 	@PostMapping
 	public ResponseEntity<?> 
-	registerOutlay(@RequestBody final Map<String, Object> requestBody) {
+	registerOutlay(@Valid @RequestBody final OutlayRequest request, 
+			final BindingResult result) {
 
+		if(result.hasErrors()) {
+			final Map<String, String> errors = result.getFieldErrors()
+					.stream()
+					.collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
+			return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+		}
+		
 		try {
-			final String item   = (String) requestBody.get("item");
-			final Integer amount = (Integer) requestBody.get("amount");
-			final Outlay outlay = Outlay.create(item, amount);
+			final Outlay outlay = Outlay.create(request.getItem(), request.getAmount());
 			final Outlay savedOutlay = outlayRepository.save(outlay);
 			
 			// ★ 201 Created ステータスと JSON レスポンスを返す
@@ -115,30 +126,30 @@ public final class OutlayController {
 
 	@PutMapping("/{id}")
 	public ResponseEntity<?> updateOutlay(@PathVariable("id") final Integer id, 
-			@RequestBody final Map<String, Object> requestBody) {
+			@Valid @RequestBody final OutlayRequest request,
+			final BindingResult result) {
+		
 		final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
+		
 		if (existingOutlay.isEmpty()) {
 			return createErrorResponse("更新に失敗しました。指定されたIDの出費データは存在しません。", 
 					HttpStatus.NOT_FOUND);
 		}
+		
+		if(result.hasErrors()) {
+			final Map<String, String> errors = result.getFieldErrors()
+					.stream()
+					.collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
+			return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+		}
 
 		try {
-			final String item = (String) requestBody.get("item");
-			final Integer amount = (Integer) requestBody.get("amount");
-			final Outlay outlayToUpdate = existingOutlay.get();
-			outlayToUpdate.setItem(item);
-			outlayToUpdate.setAmount(amount);
+			final var outlayToUpdate = existingOutlay.get();
+			outlayToUpdate.setItem(request.getItem());
+			outlayToUpdate.setAmount(request.getAmount());
 			final Outlay updatedOutlay = outlayRepository.save(outlayToUpdate);
 
 	        return ResponseEntity.ok(updatedOutlay);
-
-		}catch (IllegalArgumentException e) {
-			return createErrorResponse(e.getMessage(), 
-					HttpStatus.BAD_REQUEST, e);
-
-		} catch (ClassCastException e) {
-			return createErrorResponse("リクエストボディの型が不正です。",
-					HttpStatus.BAD_REQUEST, e);
 
 		} catch (Exception e) {
 			return createErrorResponse("出費データ更新中にサーバーエラーが発生しました。", // エラーメッセージをサーバーエラーに
