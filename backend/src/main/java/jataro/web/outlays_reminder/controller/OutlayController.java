@@ -1,6 +1,7 @@
 package jataro.web.outlays_reminder.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -46,12 +47,9 @@ public final class OutlayController {
 	public ResponseEntity<?> 
 	registerOutlay(@Valid @RequestBody final OutlayRequest request, 
 			final BindingResult result) {
-
-		if(result.hasErrors()) {
-			final Map<String, String> errors = result.getFieldErrors()
-					.stream()
-					.collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-			return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+		
+		if(validateOutlayRequest(result).isPresent()) {
+			return validateOutlayRequest(result).get();
 		}
 		
 		try {
@@ -136,11 +134,8 @@ public final class OutlayController {
 					HttpStatus.NOT_FOUND);
 		}
 		
-		if(result.hasErrors()) {
-			final Map<String, String> errors = result.getFieldErrors()
-					.stream()
-					.collect(Collectors.toMap(FieldError::getField, FieldError::getDefaultMessage));
-			return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+		if(validateOutlayRequest(result).isPresent()) {
+			return validateOutlayRequest(result).get();
 		}
 
 		try {
@@ -173,6 +168,18 @@ public final class OutlayController {
 			return createErrorResponse("ID指定による出費データ削除中にエラーが発生しました。", 
 					HttpStatus.INTERNAL_SERVER_ERROR, e);
 		}	
+	}
+	
+	private Optional<ResponseEntity<?>> validateOutlayRequest(final BindingResult result) {
+		if(result.hasErrors()) {
+			final Map<String, List<String>> errors = result.getFieldErrors()
+					.stream()
+					.collect(Collectors.groupingBy(
+		                    FieldError::getField,
+		                    Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList())));
+			return Optional.ofNullable(new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST));
+		}
+		return Optional.empty();
 	}
 
 	private ResponseEntity<?> createErrorResponse(final String message, 
