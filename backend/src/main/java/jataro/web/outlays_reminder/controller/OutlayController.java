@@ -1,15 +1,13 @@
 package jataro.web.outlays_reminder.controller;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -20,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -43,7 +42,7 @@ public final class OutlayController {
 	registerOutlay(@RequestBody final Map<String, Object> requestBody) {
 
 		try {
-			final String item = (String) requestBody.get("item");
+			final String item   = (String) requestBody.get("item");
 			final Integer amount = (Integer) requestBody.get("amount");
 			final Outlay outlay = Outlay.create(item, amount);
 			final Outlay savedOutlay = outlayRepository.save(outlay);
@@ -71,11 +70,23 @@ public final class OutlayController {
 	}
 
 	@GetMapping
-	public ResponseEntity<?> getAllOutlays() {
+	public ResponseEntity<?> getAllOutlays(
+			@RequestParam(value = "sortBy", required = false) final String sortBy,
+			@RequestParam(value = "sortDirection", required = false, defaultValue = "asc") final String sortDirection) {
 		try {
-			final List<Outlay> outlays = StreamSupport
-					.stream(outlayRepository.findAll().spliterator(), false)
-					.collect(Collectors.toList());
+			Sort sort = Sort.unsorted();
+			if(sortBy != null) {
+				Sort.Direction direction = sortDirection.equalsIgnoreCase("desc") 
+						? Sort.Direction.DESC : Sort.Direction.ASC;
+				
+				if(sortBy.equalsIgnoreCase("item")) {
+					sort = Sort.by(direction, "item");
+				} else if(sortBy.equalsIgnoreCase("amount")) {
+					sort = Sort.by(direction, "amount");
+				}
+			}
+			
+			final var outlays = outlayRepository.findAll(sort);
 			
 			return outlays.isEmpty() 
 					? createErrorResponse("出費データが存在しません", HttpStatus.NOT_FOUND) 
@@ -114,11 +125,10 @@ public final class OutlayController {
 		try {
 			final String item = (String) requestBody.get("item");
 			final Integer amount = (Integer) requestBody.get("amount");
-			final Outlay validatedOutlay = Outlay.create(item, amount);
-			final Outlay outlayToUpdate = existingOutlay.get(); // Optional から Outlay オブジェクトを取得
-
-			outlayToUpdate.setOutlayData(validatedOutlay.getOutlayData()); 
-			final Outlay updatedOutlay = outlayRepository.save(outlayToUpdate); 
+			final Outlay outlayToUpdate = existingOutlay.get();
+			outlayToUpdate.setItem(item);
+			outlayToUpdate.setAmount(amount);
+			final Outlay updatedOutlay = outlayRepository.save(outlayToUpdate);
 
 	        return ResponseEntity.ok(updatedOutlay);
 
@@ -172,4 +182,4 @@ public final class OutlayController {
 		}
 		return createErrorResponse(message, status); // メッセージとステータスコードのみのオーバーロードを呼び出す
 	}
-	}
+}
