@@ -48,8 +48,8 @@ public final class OutlayController {
 	registerOutlay(@Valid @RequestBody final OutlayRequest request, 
 			final BindingResult result) {
 		
-		if(validateOutlayRequest(result).isPresent()) {
-			return validateOutlayRequest(result).get();
+		if(handleValidationErrors(result).isPresent()) {
+			return handleValidationErrors(result).get();
 		}
 		
 		try {
@@ -134,8 +134,8 @@ public final class OutlayController {
 					HttpStatus.NOT_FOUND);
 		}
 		
-		if(validateOutlayRequest(result).isPresent()) {
-			return validateOutlayRequest(result).get();
+		if(handleValidationErrors(result).isPresent()) {
+			return handleValidationErrors(result).get();
 		}
 
 		try {
@@ -170,7 +170,7 @@ public final class OutlayController {
 		}	
 	}
 	
-	private Optional<ResponseEntity<?>> validateOutlayRequest(final BindingResult result) {
+	private Optional<ResponseEntity<?>> handleValidationErrors(final BindingResult result) {
 		if(result.hasErrors()) {
 			final Map<String, List<String>> errors = result.getFieldErrors()
 					.stream()
