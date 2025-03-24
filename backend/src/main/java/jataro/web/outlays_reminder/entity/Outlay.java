@@ -49,9 +49,6 @@ public final class Outlay {
 	}
 	
 	public static Outlay create(final String item, final Integer amount) {
-//        validateItem(item);
-//        validateAmount(amount);
-		
 	    final String escapedItem = 
 	    		HtmlUtils.htmlEscape(item, StandardCharsets.UTF_8.name());
 	    
