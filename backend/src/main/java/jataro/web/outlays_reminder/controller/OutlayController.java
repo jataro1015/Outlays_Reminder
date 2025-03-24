@@ -88,11 +88,16 @@ public final class OutlayController {
 				Sort.Direction direction = sortDirection.equalsIgnoreCase("desc") 
 						? Sort.Direction.DESC : Sort.Direction.ASC;
 				
-				if(sortBy.equalsIgnoreCase("item")) {
-					sort = Sort.by(direction, "item");
-				} else if(sortBy.equalsIgnoreCase("amount")) {
-					sort = Sort.by(direction, "amount");
-				}
+                final Map<String, String> sortableFields = Map.of(
+                        "item", "item",
+                        "amount", "amount",
+                        "createdAt", "createdAt",
+                        "id", "id"
+                );
+
+                if (sortableFields.containsKey(sortBy.toLowerCase())) {
+                    sort = Sort.by(direction, sortableFields.get(sortBy.toLowerCase()));
+                }
 			}
 			
 			final var outlays = outlayRepository.findAll(sort);
