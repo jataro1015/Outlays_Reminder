@@ -1,5 +1,6 @@
 package jataro.web.outlays_reminder.controller;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -63,13 +65,13 @@ public final class OutlayController {
 	                        .buildAndExpand(savedOutlay.getId()) // ID を展開して URI を作成
 	                        .toUri()) // 作成されたリソースの URI を取得
 	                .body(Map.of("id", savedOutlay.getId())); // レスポンスボディに ID を JSON 形式で含める
-
+	        
 		} catch (IllegalArgumentException e) {
 			return createErrorResponse("入力値が不正です。", 
 					HttpStatus.BAD_REQUEST, e);
 			
 		}catch (ClassCastException e) {
-			return createErrorResponse("リクエストボディの型が不正です。",
+			return createErrorResponse("リクエストボディの型を合わせてください。",
 					HttpStatus.BAD_REQUEST, e);
 			
 		} catch (Exception e) {
@@ -124,6 +126,21 @@ public final class OutlayController {
 		} catch (Exception e) {
 			return createErrorResponse("ID指定による出費データ取得中にエラーが発生しました。", 
 					HttpStatus.INTERNAL_SERVER_ERROR, e);
+		}
+	}
+	
+	@GetMapping("on-date")
+	public ResponseEntity<?> getOutlaysByDate(@RequestParam("date") 
+	@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date){
+		try {
+			final List<Outlay> outlays = outlayRepository.findByCreatedAtDate(date);
+			
+			return outlays.isEmpty()
+					? new ResponseEntity<>(Map.of("message", "指定された日付の出費データは存在しません。"), HttpStatus.NOT_FOUND)
+					: ResponseEntity.ok(outlays);
+		} catch (Exception e) {
+			return createErrorResponse("日付指定による出費データ取得中にエラーが発生しました。", 
+					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
