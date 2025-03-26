@@ -1,5 +1,6 @@
 package jataro.web.outlays_reminder.controller;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.HtmlUtils;
 
 import jakarta.validation.Valid;
 import jataro.web.outlays_reminder.dto.OutlayRequest;
@@ -87,7 +89,9 @@ public final class OutlayController {
 		try {
 			Sort sort = Sort.unsorted();
 			if(sortBy != null) {
-				Sort.Direction direction = sortDirection.equalsIgnoreCase("desc") 
+				final var escapedSortBy = HtmlUtils.htmlEscape(sortBy, StandardCharsets.UTF_8.name());
+				final var escapedSortDirection = HtmlUtils.htmlEscape(sortDirection, StandardCharsets.UTF_8.name());
+				final Sort.Direction direction = "desc".equalsIgnoreCase(escapedSortDirection) 
 						? Sort.Direction.DESC : Sort.Direction.ASC;
 				
                 final Map<String, String> sortableFields = Map.of(
@@ -97,8 +101,8 @@ public final class OutlayController {
                         "id", "id"
                 );
 
-                if (sortableFields.containsKey(sortBy.toLowerCase())) {
-                    sort = Sort.by(direction, sortableFields.get(sortBy.toLowerCase()));
+                if (sortableFields.containsKey(escapedSortBy.toLowerCase())) {
+                    sort = Sort.by(direction, sortableFields.get(escapedSortBy.toLowerCase()));
                 }
 			}
 			
