@@ -19,6 +19,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.HtmlUtils;
 
@@ -66,7 +68,7 @@ public final class OutlayController {
 	                        .path("/{id}") // ID をパスに追加
 	                        .buildAndExpand(savedOutlay.getId()) // ID を展開して URI を作成
 	                        .toUri()) // 作成されたリソースの URI を取得
-	                .body(Map.of("id", savedOutlay.getId())); // レスポンスボディに ID を JSON 形式で含める
+	                		.body(Map.of("id", savedOutlay.getId())); // レスポンスボディに ID を JSON 形式で含める
 	        
 		} catch (IllegalArgumentException e) {
 			return createErrorResponse("入力値が不正です。", 
@@ -91,7 +93,7 @@ public final class OutlayController {
 			if(sortBy != null) {
 				final var escapedSortBy = HtmlUtils.htmlEscape(sortBy, StandardCharsets.UTF_8.name());
 				final var escapedSortDirection = HtmlUtils.htmlEscape(sortDirection, StandardCharsets.UTF_8.name());
-				final Sort.Direction direction = "desc".equalsIgnoreCase(escapedSortDirection) 
+				final var direction = "desc".equalsIgnoreCase(escapedSortDirection) 
 						? Sort.Direction.DESC : Sort.Direction.ASC;
 				
                 final Map<String, String> sortableFields = Map.of(
@@ -195,6 +197,16 @@ public final class OutlayController {
 					HttpStatus.INTERNAL_SERVER_ERROR, e);
 		}	
 	}
+	
+	//アノテーションにmessage属性がない場合、これで例外を捕捉する。
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<?> handleDateParseException(MethodArgumentTypeMismatchException ex) {
+        if (ex.getName().equals("date")) {
+            return new ResponseEntity<>(Map.of("message", "日付の形式が正しくありません。YYYY-MM-DD の形式で入力してください。"), HttpStatus.BAD_REQUEST);
+        }
+        // 他の型変換エラーが発生した場合の処理 (必要に応じて)
+        return new ResponseEntity<>(Map.of("message", "リクエストパラメータの形式が不正です。"), HttpStatus.BAD_REQUEST);
+    }
 	
 	private Optional<ResponseEntity<?>> handleValidationErrors(final BindingResult result) {
 		if(result.hasErrors()) {
