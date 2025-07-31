@@ -1,27 +1,21 @@
 package jataro.web.outlays_reminder.entity;
 
-import java.time.temporal.ValueRange;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 
-import org.springframework.util.StringUtils;
+import org.springframework.web.util.HtmlUtils;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 @Entity
 @Table(name = "outlays") // テーブル名をoutlaysに指定
-@JsonPropertyOrder({"item", "amount"}) // JSONシリアライズ時のプロパティの順序を保証する
 @Getter
 @Setter
 public final class Outlay {
@@ -30,8 +24,14 @@ public final class Outlay {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 	
-	@Lob // JSON型カラムをStringで扱う場合はこれを付与
-	private String outlayData; // カラム名 outlay_dataに対応
+	@Column(nullable = false)
+	private String item;
+	
+	@Column(nullable = false)
+	private Integer amount;
+	
+	@Column(name = "created_at", nullable = false, updatable = false)
+	private LocalDateTime createdAt;
 	
 	/**
 	 * JPA（Hibernate）のためにのみ使用するpublic デフォルトコンストラクタであり、通常使用は推奨されません。
@@ -42,39 +42,16 @@ public final class Outlay {
 	@Deprecated
 	public Outlay() {}
 	
-	private Outlay(final String outlayData) {
-		this.outlayData = outlayData;
+	private Outlay(final String item, Integer amount) {
+		this.item = item;
+		this.amount = amount;
+		this.createdAt = LocalDateTime.now();
 	}
 	
 	public static Outlay create(final String item, final Integer amount) {
-		if(!StringUtils.hasText(item)) {
-			throw new IllegalArgumentException("費目には、1文字以上の空白以外の文字を必ず入力してください。");
-		}
-		if(amount == null || amount <= 0) {
-			throw new IllegalArgumentException("金額は1以上の数値を入力してください。");
-		}
-		if(!ValueRange.of(amount, amount).isIntValue()) {
-			throw new IllegalArgumentException("もう少し小さい数値を入力してください。");
-		}
-	
-		return new Outlay(createJsonAsString(item, amount));
-	}
-	
-	
-	public static final String createJsonAsString(final String item, final Integer amount){
-		
-		//JSON 形式のデータを作成(Jackson)
-		final var om = new ObjectMapper();
-		final Map<String, Object> outlayDataMap = new LinkedHashMap<>();
-		outlayDataMap.put("item", item);
-		outlayDataMap.put("amount", amount);
-		String outlayDataJson;
-		try {
-			outlayDataJson = om.writeValueAsString(outlayDataMap);
-		}catch(JsonProcessingException jpe) {
-			throw new IllegalArgumentException("JSONデータ作成に失敗しました。", jpe);
-		}
-		
-		return outlayDataJson;
+	    final String escapedItem = 
+	    		HtmlUtils.htmlEscape(item, StandardCharsets.UTF_8.name());
+	    
+        return new Outlay(escapedItem, amount);
 	}
 }
