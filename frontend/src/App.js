@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import './App.css';
 
+import { FaSun, FaMoon } from 'react-icons/fa';
+
 function App() {
   const [outlays, setOutlays] = useState([]);
   const [error, setError] = useState(null);
@@ -9,6 +11,11 @@ function App() {
   const [sortDirection, setSortDirection] = useState('asc');
   const [filterId, setFilterId] = useState('');
   const [filterDate, setFilterDate] = useState('');
+  const [theme, setTheme] = useState('dark'); // 'dark' or 'light'
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   const fetchOutlays = useCallback(async () => {
     setLoading(true);
@@ -59,8 +66,16 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <div className={`App ${theme}`}>
       <header className="App-header">
+        <div className="toggle-container">
+          <FaSun />
+          <label className="toggle-switch">
+            <input type="checkbox" checked={theme === 'dark'} onChange={toggleTheme} />
+            <span className="slider round"></span>
+          </label>
+          <FaMoon />
+        </div>
         <h1>Outlays Reminder</h1>
 
         <div className="controls">
