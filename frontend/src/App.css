@@ -1,6 +1,64 @@
 .App {
   text-align: center;
+  transition: background-color 0.3s, color 0.3s;
 }
+
+/* Dark Mode */
+.App.dark {
+  background-color: #282c34;
+  color: white;
+}
+
+.App.dark .App-header {
+  background-color: #282c34;
+  color: white;
+}
+
+.App.dark .controls input, 
+.App.dark .controls select {
+  background-color: #333;
+  color: white;
+  border: 1px solid #555;
+}
+
+.App.dark .controls button {
+  background-color: #555;
+  color: white;
+  border: 1px solid #777;
+}
+
+.App.dark .App-link {
+  color: #61dafb;
+}
+
+/* Light Mode */
+.App.light {
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+.App.light .App-header {
+  background-color: #ffffff;
+  color: #282c34;
+}
+
+.App.light .controls input, 
+.App.light .controls select {
+  background-color: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.App.light .controls button {
+  background-color: #ddd;
+  color: #333;
+  border: 1px solid #bbb;
+}
+
+.App.light .App-link {
+  color: #0b8dd8;
+}
+
 
 .App-logo {
   height: 40vmin;
@@ -14,18 +72,23 @@
 }
 
 .App-header {
-  background-color: #282c34;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.controls {
+  margin: 20px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.controls div {
+  margin-bottom: 10px;
 }
 
 @keyframes App-logo-spin {
@@ -35,4 +98,75 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Toggle Switch */
+.toggle-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.toggle-container svg {
+  margin: 0 10px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.toggle-switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
 }
