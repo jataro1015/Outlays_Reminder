@@ -29,7 +29,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.HtmlUtils;
 
 import jakarta.validation.Valid;
@@ -138,16 +137,6 @@ public final class OutlayController {
 			return createErrorResponse("日付指定による出費データ取得中にエラーが発生しました。", 
 					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
-	}
-	
-	@GetMapping("/{id}")
-	public ResponseEntity<?> getOutlayById(@PathVariable("id") Integer id){
-		final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
-        if (existingOutlay.isEmpty()) {
-            return new ResponseEntity<>("指定されたIDの出費データは存在しません。", 
-            		HttpStatus.NOT_FOUND); // 404 Not Found を返す
-        }
-		return new ResponseEntity<>(existingOutlay.get(), HttpStatus.OK);
 	}
 	
 	@PutMapping("/{id}")
