@@ -132,7 +132,7 @@ public final class OutlayController {
 			final List<Outlay> outlays = outlayRepository.findByCreatedAtDate(date);
 			
 			return outlays.isEmpty()
-					? new ResponseEntity<>(Map.of("message", "指定された日付の出費データは存在しません。"), HttpStatus.NOT_FOUND)
+					? createErrorResponse("指定された日付の出費データは存在しません。", HttpStatus.NOT_FOUND)
 					: ResponseEntity.ok(outlays);
 		} catch (Exception e) {
 			return createErrorResponse("日付指定による出費データ取得中にエラーが発生しました。", 
