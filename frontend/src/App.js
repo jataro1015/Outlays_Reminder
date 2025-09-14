@@ -13,6 +13,11 @@ function App() {
   const [filterDate, setFilterDate] = useState('');
   const [theme, setTheme] = useState('dark'); // 'dark' or 'light'
 
+  const [newItem, setNewItem] = useState('');
+  const [newAmount, setNewAmount] = useState('');
+  const [createError, setCreateError] = useState(null);
+
+
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
@@ -65,6 +70,52 @@ function App() {
     fetchOutlays();
   };
 
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setCreateError(null);
+
+    if (!newItem || !newAmount) {
+      setCreateError('Item and amount are required.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/v1/outlays', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ item: newItem, amount: parseFloat(newAmount) }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        let errorMessage = 'Failed to create outlay';
+        if (err) {
+          if (err.message) {
+            errorMessage = err.message;
+          } else {
+            // Handle validation errors like { item: ["must not be blank"], amount: ["must be greater than 0"] }
+            const errorFields = Object.keys(err).map(field => {
+              return `${field}: ${err[field].join(', ')}`;
+            });
+            if (errorFields.length > 0) {
+              errorMessage = errorFields.join('\n');
+            }
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
+      setNewItem('');
+      setNewAmount('');
+      fetchOutlays(); // Refresh the list
+    } catch (error) {
+      console.error('Error creating outlay:', error);
+      setCreateError(error.message);
+    }
+  };
+
   return (
     <div className={`App ${theme}`}>
       <header className="App-header">
@@ -77,6 +128,32 @@ function App() {
           <FaMoon />
         </div>
         <h1>Outlays Reminder</h1>
+
+        <div className="create-form">
+          <h3>Add New Outlay</h3>
+          <form onSubmit={handleCreate}>
+            <div>
+              <label>Item:</label>
+              <input
+                type="text"
+                value={newItem}
+                onChange={(e) => setNewItem(e.target.value)}
+                placeholder="Enter item"
+              />
+            </div>
+            <div>
+              <label>Amount:</label>
+              <input
+                type="number"
+                value={newAmount}
+                onChange={(e) => setNewAmount(e.target.value)}
+                placeholder="Enter amount"
+              />
+            </div>
+            <button type="submit">Add Outlay</button>
+            {createError && <p className="error-message">{createError}</p>}
+          </form>
+        </div>
 
         <div className="controls">
           <h3>Filter & Sort</h3>
@@ -120,13 +197,22 @@ function App() {
         ) : error ? (
           <p>Error: {error}</p>
         ) : outlays.length > 0 ? (
-          <ul>
+          <div className="outlay-list">
+            <div className="outlay-header">
+              <div>ID</div>
+              <div>Item</div>
+              <div>Amount</div>
+              <div>Date</div>
+            </div>
             {outlays.map(outlay => (
-              <li key={outlay.id}>
-                ID: {outlay.id}, Item: {outlay.item}, Amount: {outlay.amount}, Date: {new Date(outlay.createdAt).toLocaleDateString()}
-              </li>
+              <div className="outlay-row" key={outlay.id}>
+                <div>{outlay.id}</div>
+                <div>{outlay.item}</div>
+                <div>¥{outlay.amount}</div>
+                <div>{new Date(outlay.createdAt).toLocaleDateString('ja-JP')}</div>
+              </div>
             ))}
-          </ul>
+          </div>
         ) : (
           <p>No outlays found.</p>
         )}
