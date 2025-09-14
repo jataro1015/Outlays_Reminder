@@ -11,14 +11,13 @@ import lombok.Setter;
 @Getter
 @Setter
 public final class OutlayRequest {
-	
-	@NotBlank
-	@Size(min = 1, max = 50)
-	private String item;
-	
-	@NotNull
-	@Min(value = 0)
-	@Max(value = 1000000)
-	private Integer amount;
-	
+
+  @NotBlank
+  @Size(min = 1, max = 50)
+  private String item;
+
+  @NotNull
+  @Min(value = 0)
+  @Max(value = 1000000)
+  private Integer amount;
 }
