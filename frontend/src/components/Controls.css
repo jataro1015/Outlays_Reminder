@@ -1,0 +1,40 @@
+.controls {
+  margin: 20px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 500px;
+}
+
+.controls div {
+  margin-bottom: 10px;
+}
+
+/* The following styles are dependent on the theme set on the parent .App component */
+
+.App.dark .controls input, 
+.App.dark .controls select {
+  background-color: #333;
+  color: white;
+  border: 1px solid #555;
+}
+
+.App.dark .controls button {
+  background-color: #555;
+  color: white;
+  border: 1px solid #777;
+}
+
+.App.light .controls input, 
+.App.light .controls select {
+  background-color: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.App.light .controls button {
+  background-color: #ddd;
+  color: #333;
+  border: 1px solid #bbb;
+}
