@@ -1,0 +1,48 @@
+.create-form {
+  margin: 20px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 500px;
+}
+
+.create-form div {
+  margin-bottom: 10px;
+}
+
+.create-form form {
+  display: flex;
+  flex-direction: column;
+}
+
+.error-message {
+  color: #ff4d4d;
+  margin-top: 10px;
+}
+
+/* Dark Mode styles for form */
+.App.dark .create-form input {
+  background-color: #333;
+  color: white;
+  border: 1px solid #555;
+}
+
+.App.dark .create-form button {
+  background-color: #555;
+  color: white;
+  border: 1px solid #777;
+}
+
+/* Light Mode styles for form */
+.App.light .create-form input {
+  background-color: #fff;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.App.light .create-form button {
+  background-color: #ddd;
+  color: #333;
+  border: 1px solid #bbb;
+}

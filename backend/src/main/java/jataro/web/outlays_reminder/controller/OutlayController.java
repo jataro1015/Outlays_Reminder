@@ -41,12 +41,11 @@ import jataro.web.outlays_reminder.repository.OutlayRepository;
 @CrossOrigin
 public final class OutlayController {
 
-	@Autowired
-	private OutlayRepository outlayRepository;
-	
-	private static final Logger logger = LoggerFactory.getLogger(OutlayController.class);
+  @Autowired private OutlayRepository outlayRepository;
 
-	private OutlayController() {}
+  private static final Logger logger = LoggerFactory.getLogger(OutlayController.class);
+
+  private OutlayController() {}
 
 	@PostMapping
 	public ResponseEntity<?> registerOutlay(@RequestBody Map<String, Object> requestBody) {
@@ -73,158 +72,161 @@ public final class OutlayController {
 		}
 	}
 
-	@GetMapping
-	public ResponseEntity<?> getAllOutlays(
-			@RequestParam(value = "sortBy", required = false) final String sortBy,
-			@RequestParam(value = "sortDirection", required = false, defaultValue = "asc") final String sortDirection) {
-		try {
-			Sort sort = Sort.unsorted();
-			if(sortBy != null) {
-				final var escapedSortBy = HtmlUtils.htmlEscape(sortBy, StandardCharsets.UTF_8.name());
-				final var escapedSortDirection = HtmlUtils.htmlEscape(sortDirection, StandardCharsets.UTF_8.name());
-				final var direction = "desc".equalsIgnoreCase(escapedSortDirection) 
-						? Sort.Direction.DESC : Sort.Direction.ASC;
-				
-                final Map<String, String> sortableFields = Map.of(
-                        "item", "item",
-                        "amount", "amount",
-                        "createdAt", "createdAt",
-                        "id", "id"
-                );
+  @GetMapping
+  public ResponseEntity<?> getAllOutlays(
+      @RequestParam(value = "sortBy", required = false) final String sortBy,
+      @RequestParam(value = "sortDirection", required = false, defaultValue = "asc")
+          final String sortDirection) {
+    try {
+      Sort sort = Sort.unsorted();
+      if (sortBy != null) {
+        final var escapedSortBy = HtmlUtils.htmlEscape(sortBy, StandardCharsets.UTF_8.name());
+        final var escapedSortDirection =
+            HtmlUtils.htmlEscape(sortDirection, StandardCharsets.UTF_8.name());
+        final var direction =
+            "desc".equalsIgnoreCase(escapedSortDirection)
+                ? Sort.Direction.DESC
+                : Sort.Direction.ASC;
 
-                if (sortableFields.containsKey(escapedSortBy.toLowerCase())) {
-                    sort = Sort.by(direction, sortableFields.get(escapedSortBy.toLowerCase()));
-                }
-			}
-			
-			final var outlays = outlayRepository.findAll(sort);
-			
-			return outlays.isEmpty() 
-					? createErrorResponse("出費データが存在しません", HttpStatus.NOT_FOUND) 
-					: ResponseEntity.ok(outlays);
+        final Map<String, String> sortableFields =
+            Map.of(
+                "item", "item",
+                "amount", "amount",
+                "createdAt", "createdAt",
+                "id", "id");
 
-		} catch (Exception e) {
-			return createErrorResponse("出費データ取得中にエラーが発生しました。", 
-					HttpStatus.INTERNAL_SERVER_ERROR, e);
-		}
-	}
-
-	@GetMapping("/{id}")
-	public ResponseEntity<?> getOutlayById(@PathVariable("id") final Integer id){
-		try {
-			final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
-			
-	        return existingOutlay.isPresent()
-	        		? ResponseEntity.ok(existingOutlay.get())
-	        		: createErrorResponse("指定されたIDの出費データは存在しません。", HttpStatus.NOT_FOUND);
-			
-		} catch (Exception e) {
-			return createErrorResponse("ID指定による出費データ取得中にエラーが発生しました。", 
-					HttpStatus.INTERNAL_SERVER_ERROR, e);
-		}
-	}
-	
-	@GetMapping("on-date")
-	public ResponseEntity<?> getOutlaysByDate(@RequestParam("date") 
-	@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date){
-		try {
-			final List<Outlay> outlays = outlayRepository.findByCreatedAtDate(date);
-			
-			return outlays.isEmpty()
-					? createErrorResponse("指定された日付の出費データは存在しません。", HttpStatus.NOT_FOUND)
-					: ResponseEntity.ok(outlays);
-		} catch (Exception e) {
-			return createErrorResponse("日付指定による出費データ取得中にエラーが発生しました。", 
-					HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-	}
-	
-	@PutMapping("/{id}")
-	public ResponseEntity<?> updateOutlay(@PathVariable("id") final Integer id, 
-			@Valid @RequestBody final OutlayRequest request,
-			final BindingResult result) {
-		
-		final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
-		
-		if (existingOutlay.isEmpty()) {
-			return createErrorResponse("更新に失敗しました。指定されたIDの出費データは存在しません。", 
-					HttpStatus.NOT_FOUND);
-		}
-		
-		if(handleValidationErrors(result).isPresent()) {
-			return handleValidationErrors(result).get();
-		}
-
-		try {
-			final var outlayToUpdate = existingOutlay.get();
-			outlayToUpdate.setItem(request.getItem());
-			outlayToUpdate.setAmount(request.getAmount());
-			final Outlay updatedOutlay = outlayRepository.save(outlayToUpdate);
-
-	        return ResponseEntity.ok(updatedOutlay);
-
-		} catch (Exception e) {
-			return createErrorResponse("出費データ更新中にサーバーエラーが発生しました。", // エラーメッセージをサーバーエラーに
-					HttpStatus.INTERNAL_SERVER_ERROR, e);
-		}
-	}
-
-	@DeleteMapping("/{id}")
-	public ResponseEntity<?> deleteOutlay(@PathVariable("id") final Integer id) {
-		try {
-			if(!outlayRepository.existsById(id)) {
-				return createErrorResponse("削除に失敗しました。指定されたIDの出費データは存在しません。", 
-						HttpStatus.NOT_FOUND);
-			}
-
-			outlayRepository.deleteById(id);
-
-			return ResponseEntity.noContent().build();
-			
-		} catch (Exception e) {
-			return createErrorResponse("ID指定による出費データ削除中にエラーが発生しました。", 
-					HttpStatus.INTERNAL_SERVER_ERROR, e);
-		}	
-	}
-	
-	//アノテーションにmessage属性がない場合、これで例外を捕捉する。
-    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<?> handleDateParseException(MethodArgumentTypeMismatchException ex) {
-        if (ex.getName().equals("date")) {
-            return new ResponseEntity<>(Map.of("message", "日付の形式が正しくありません。YYYY-MM-DD の形式で入力してください。"), HttpStatus.BAD_REQUEST);
+        if (sortableFields.containsKey(escapedSortBy.toLowerCase())) {
+          sort = Sort.by(direction, sortableFields.get(escapedSortBy.toLowerCase()));
         }
-        // 他の型変換エラーが発生した場合の処理 (必要に応じて)
-        return new ResponseEntity<>(Map.of("message", "リクエストパラメータの形式が不正です。"), HttpStatus.BAD_REQUEST);
+      }
+
+      final var outlays = outlayRepository.findAll(sort);
+
+      return outlays.isEmpty()
+          ? createErrorResponse("出費データが存在しません", HttpStatus.NOT_FOUND)
+          : ResponseEntity.ok(outlays);
+
+    } catch (Exception e) {
+      return createErrorResponse("出費データ取得中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR, e);
     }
-	
-	private Optional<ResponseEntity<?>> handleValidationErrors(final BindingResult result) {
-		if(result.hasErrors()) {
-			final Map<String, List<String>> errors = result.getFieldErrors()
-					.stream()
-					.collect(Collectors.groupingBy(
-		                    FieldError::getField,
-		                    Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList())));
-			return Optional.ofNullable(new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST));
-		}
-		return Optional.empty();
-	}
+  }
 
-	private ResponseEntity<?> createErrorResponse(final String message, 
-			final HttpStatus status) {
-		final Map<String, String> responseBody = new HashMap<>();
-		responseBody.put("message", message);
-		return new ResponseEntity<>(responseBody, status);
-	}
+  @GetMapping("/{id}")
+  public ResponseEntity<?> getOutlayById(@PathVariable("id") final Integer id) {
+    try {
+      final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
 
-	private ResponseEntity<?> createErrorResponse(final String message, 
-			final HttpStatus status, final Exception e) {
-		if(e instanceof IllegalArgumentException 
-				|| e instanceof ClassCastException) {
-			logger.warn(message, e);
+      return existingOutlay.isPresent()
+          ? ResponseEntity.ok(existingOutlay.get())
+          : createErrorResponse("指定されたIDの出費データは存在しません。", HttpStatus.NOT_FOUND);
 
-		} else {
-			logger.error(message, e);
-		}
-		return createErrorResponse(message, status); // メッセージとステータスコードのみのオーバーロードを呼び出す
-	}
+    } catch (Exception e) {
+      return createErrorResponse(
+          "ID指定による出費データ取得中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR, e);
+    }
+  }
+
+  @GetMapping("on-date")
+  public ResponseEntity<?> getOutlaysByDate(
+      @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date) {
+    try {
+      final List<Outlay> outlays = outlayRepository.findByCreatedAtDate(date);
+
+      return outlays.isEmpty()
+          ? createErrorResponse("指定された日付の出費データは存在しません。", HttpStatus.NOT_FOUND)
+          : ResponseEntity.ok(outlays);
+    } catch (Exception e) {
+      return createErrorResponse("日付指定による出費データ取得中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @PutMapping("/{id}")
+  public ResponseEntity<?> updateOutlay(
+      @PathVariable("id") final Integer id,
+      @Valid @RequestBody final OutlayRequest request,
+      final BindingResult result) {
+
+    final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
+
+    if (existingOutlay.isEmpty()) {
+      return createErrorResponse("更新に失敗しました。指定されたIDの出費データは存在しません。", HttpStatus.NOT_FOUND);
+    }
+
+    if (handleValidationErrors(result).isPresent()) {
+      return handleValidationErrors(result).get();
+    }
+
+    try {
+      final var outlayToUpdate = existingOutlay.get();
+      outlayToUpdate.setItem(request.getItem());
+      outlayToUpdate.setAmount(request.getAmount());
+      final Outlay updatedOutlay = outlayRepository.save(outlayToUpdate);
+
+      return ResponseEntity.ok(updatedOutlay);
+
+    } catch (Exception e) {
+      return createErrorResponse(
+          "出費データ更新中にサーバーエラーが発生しました。", // エラーメッセージをサーバーエラーに
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          e);
+    }
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<?> deleteOutlay(@PathVariable("id") final Integer id) {
+    try {
+      if (!outlayRepository.existsById(id)) {
+        return createErrorResponse("削除に失敗しました。指定されたIDの出費データは存在しません。", HttpStatus.NOT_FOUND);
+      }
+
+      outlayRepository.deleteById(id);
+
+      return ResponseEntity.noContent().build();
+
+    } catch (Exception e) {
+      return createErrorResponse(
+          "ID指定による出費データ削除中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR, e);
+    }
+  }
+
+  // アノテーションにmessage属性がない場合、これで例外を捕捉する。
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<?> handleDateParseException(MethodArgumentTypeMismatchException ex) {
+    if (ex.getName().equals("date")) {
+      return new ResponseEntity<>(
+          Map.of("message", "日付の形式が正しくありません。YYYY-MM-DD の形式で入力してください。"), HttpStatus.BAD_REQUEST);
+    }
+    // 他の型変換エラーが発生した場合の処理 (必要に応じて)
+    return new ResponseEntity<>(Map.of("message", "リクエストパラメータの形式が不正です。"), HttpStatus.BAD_REQUEST);
+  }
+
+  private Optional<ResponseEntity<?>> handleValidationErrors(final BindingResult result) {
+    if (result.hasErrors()) {
+      final Map<String, List<String>> errors =
+          result.getFieldErrors().stream()
+              .collect(
+                  Collectors.groupingBy(
+                      FieldError::getField,
+                      Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList())));
+      return Optional.ofNullable(new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST));
+    }
+    return Optional.empty();
+  }
+
+  private ResponseEntity<?> createErrorResponse(final String message, final HttpStatus status) {
+    final Map<String, String> responseBody = new HashMap<>();
+    responseBody.put("message", message);
+    return new ResponseEntity<>(responseBody, status);
+  }
+
+  private ResponseEntity<?> createErrorResponse(
+      final String message, final HttpStatus status, final Exception e) {
+    if (e instanceof IllegalArgumentException || e instanceof ClassCastException) {
+      logger.warn(message, e);
+
+    } else {
+      logger.error(message, e);
+    }
+    return createErrorResponse(message, status); // メッセージとステータスコードのみのオーバーロードを呼び出す
+  }
 }
