@@ -47,7 +47,28 @@ public final class Outlay {
   }
 
   public static Outlay create(final String item, final Integer amount) {
-    final String escapedItem = HtmlUtils.htmlEscape(item, StandardCharsets.UTF_8.name());
+    if (item == null) {
+      throw new IllegalArgumentException("item must not be null");
+    }
+
+    final String trimmedItem = item.trim();
+    if (trimmedItem.isEmpty()) {
+      throw new IllegalArgumentException("item must not be blank");
+    }
+
+    if (amount == null) {
+      throw new IllegalArgumentException("amount must not be null");
+    }
+
+    if (amount < 0) {
+      throw new IllegalArgumentException("amount must be greater than or equal to 0");
+    }
+
+    if (amount > 1_000_000) {
+      throw new IllegalArgumentException("amount must be less than or equal to 1000000");
+    }
+
+    final String escapedItem = HtmlUtils.htmlEscape(trimmedItem, StandardCharsets.UTF_8.name());
 
     return new Outlay(escapedItem, amount);
   }
