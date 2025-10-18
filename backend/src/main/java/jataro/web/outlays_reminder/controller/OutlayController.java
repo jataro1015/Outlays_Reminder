@@ -1,5 +1,9 @@
 package jataro.web.outlays_reminder.controller;
 
+import jakarta.validation.Valid;
+import jataro.web.outlays_reminder.dto.OutlayRequest;
+import jataro.web.outlays_reminder.entity.Outlay;
+import jataro.web.outlays_reminder.repository.OutlayRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -7,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,12 +32,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.HtmlUtils;
-
-import jakarta.validation.Valid;
-import jataro.web.outlays_reminder.dto.OutlayRequest;
-import jataro.web.outlays_reminder.entity.Outlay;
-import jataro.web.outlays_reminder.repository.OutlayRepository;
 
 @RestController
 @RequestMapping("/api/v1/outlays")
@@ -47,30 +46,36 @@ public final class OutlayController {
 
   private OutlayController() {}
 
-	@PostMapping
-	public ResponseEntity<?> registerOutlay(@RequestBody Map<String, Object> requestBody) {
-		final String item = (String) requestBody.get("item");
-		final Integer amount = (Integer) requestBody.get("amount");
-		
-		try {
-			 
-			Outlay outlay = Outlay.create(item, amount);
-			Outlay savedOutlay = outlayRepository.save(outlay);
-			return ResponseEntity.ok(savedOutlay);
-			
-		} catch (IllegalArgumentException e) {
-			return createErrorResponse("入力値が不正です。", 
-					HttpStatus.BAD_REQUEST, e);
-			
-		}catch (ClassCastException e) {
-			return createErrorResponse("リクエストボディの型を合わせてください。",
-					HttpStatus.BAD_REQUEST, e);
-			
-		} catch (Exception e) {
-			return createErrorResponse("出費データ登録中にエラーが発生しました。", 
-					HttpStatus.INTERNAL_SERVER_ERROR, e);
-		}
-	}
+  @PostMapping
+  public ResponseEntity<?> registerOutlay(
+      @Valid @RequestBody final OutlayRequest request, final BindingResult result) {
+
+    if (handleValidationErrors(result).isPresent()) {
+      return handleValidationErrors(result).get();
+    }
+
+    try {
+      final Outlay outlay = Outlay.create(request.getItem(), request.getAmount());
+      final Outlay savedOutlay = outlayRepository.save(outlay);
+
+      // ★ 201 Created ステータスと JSON レスポンスを返す
+      return ResponseEntity.created(
+              ServletUriComponentsBuilder.fromCurrentRequestUri() // 現在のリクエスト URI をベースに
+                  .path("/{id}") // ID をパスに追加
+                  .buildAndExpand(savedOutlay.getId()) // ID を展開して URI を作成
+                  .toUri()) // 作成されたリソースの URI を取得
+          .body(Map.of("id", savedOutlay.getId())); // レスポンスボディに ID を JSON 形式で含める
+
+    } catch (IllegalArgumentException e) {
+      return createErrorResponse("入力値が不正です。", HttpStatus.BAD_REQUEST, e);
+
+    } catch (ClassCastException e) {
+      return createErrorResponse("リクエストボディの型を合わせてください。", HttpStatus.BAD_REQUEST, e);
+
+    } catch (Exception e) {
+      return createErrorResponse("出費データ登録中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR, e);
+    }
+  }
 
   @GetMapping
   public ResponseEntity<?> getAllOutlays(
@@ -133,7 +138,7 @@ public final class OutlayController {
       final List<Outlay> outlays = outlayRepository.findByCreatedAtDate(date);
 
       return outlays.isEmpty()
-          ? createErrorResponse("指定された日付の出費データは存在しません。", HttpStatus.NOT_FOUND)
+          ? new ResponseEntity<>(Map.of("message", "指定された日付の出費データは存在しません。"), HttpStatus.NOT_FOUND)
           : ResponseEntity.ok(outlays);
     } catch (Exception e) {
       return createErrorResponse("日付指定による出費データ取得中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR);
