@@ -12,12 +12,16 @@ import lombok.Setter;
 @Setter
 public final class OutlayRequest {
 
-  @NotBlank
-  @Size(min = 1, max = 50)
+  @NotBlank(message = "item must not be blank")
+  @Size(max = 50, message = "item must be 50 characters or less")
   private String item;
 
-  @NotNull
-  @Min(value = 0)
-  @Max(value = 1000000)
+  @NotNull(message = "amount is required")
+  @Min(value = 0, message = "amount must be at least 0")
+  @Max(value = 1000000, message = "amount must be 1,000,000 or less")
   private Integer amount;
+
+  public void setItem(final String item) {
+    this.item = item == null ? null : item.trim();
+  }
 }
