@@ -1,10 +1,26 @@
 package jataro.web.outlays_reminder.controller;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,25 +29,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jataro.web.outlays_reminder.entity.Outlay;
 import jataro.web.outlays_reminder.repository.OutlayRepository;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 
 @WebMvcTest(OutlayController.class)
+// OutlayController の REST エンドポイントを MockMvc で網羅的に検証するテストクラス。
 public class OutlayControllerTest {
 
   @Autowired private MockMvc mockMvc;
@@ -44,8 +47,8 @@ public class OutlayControllerTest {
   private Outlay outlay2;
 
   @BeforeEach
+  // テスト間で再利用する標準データを生成し、ID と作成日時を固定する。
   void setUp() {
-    // Outlay.create() で生成し、セッターで ID と作成日時を設定
     outlay1 = Outlay.create("Lunch", 1000);
     outlay1.setId(1);
     outlay1.setCreatedAt(LocalDateTime.now());
@@ -56,6 +59,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 正常系：出費が存在する場合に全件取得 API が 200 と内容を返す。
   void getAllOutlays_shouldReturnAllOutlays() throws Exception {
     // Given
     List<Outlay> allOutlays = Arrays.asList(outlay1, outlay2);
@@ -76,6 +80,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 異常系：データが空の場合に 404 とエラーメッセージを返す。
   void getAllOutlays_shouldReturnNotFound_whenNoOutlaysExist() throws Exception {
     // Given
     when(outlayRepository.findAll(Sort.unsorted())).thenReturn(Collections.emptyList());
@@ -90,6 +95,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 正常系：item 昇順指定でソートされた結果が返る。
   void getAllOutlays_shouldReturnSortedOutlays_byItemAsc() throws Exception {
     // Given
     List<Outlay> sortedOutlays = Arrays.asList(outlay2, outlay1); // Dinner, Lunch
@@ -107,6 +113,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 正常系：amount 降順指定でソートされた結果が返る。
   void getAllOutlays_shouldReturnSortedOutlays_byAmountDesc() throws Exception {
     // Given
     List<Outlay> sortedOutlays = Arrays.asList(outlay2, outlay1); // 2000, 1000
@@ -125,6 +132,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 正常系：登録 API が 201 と作成した出費情報を返す。
   void registerOutlay_shouldCreateNewOutlay() throws Exception {
     // Given
     Outlay newOutlay = Outlay.create("Coffee", 500);
@@ -147,6 +155,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 異常系：登録時のバリデーション違反で 400 とエラー詳細を返す。
   void registerOutlay_shouldReturnBadRequest_whenValidationFails() throws Exception {
     // Given
     String invalidOutlayRequestJson = "{\"item\": \"\", \"amount\": 500}";
@@ -163,6 +172,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 正常系：ID 検索で出費を発見した場合に 200 と詳細を返す。
   void getOutlayById_shouldReturnOutlay_whenFound() throws Exception {
     // Given
     when(outlayRepository.findById(1)).thenReturn(Optional.of(outlay1));
@@ -178,6 +188,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 異常系：ID 検索で未発見の場合に 404 とメッセージを返す。
   void getOutlayById_shouldReturnNotFound_whenNotFound() throws Exception {
     // Given
     when(outlayRepository.findById(99)).thenReturn(Optional.empty());
@@ -192,6 +203,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 正常系：指定日に出費が存在する場合に 200 と一覧を返す。
   void getOutlaysByDate_shouldReturnOutlays_whenFound() throws Exception {
     // Given
     LocalDate testDate = LocalDate.now();
@@ -211,6 +223,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 異常系：指定日に出費が無い場合に 404 とメッセージを返す。
   void getOutlaysByDate_shouldReturnNotFound_whenNoOutlaysOnDate() throws Exception {
     // Given
     LocalDate testDate = LocalDate.of(2023, 1, 1);
@@ -227,6 +240,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 異常系：日付パラメータの形式が不正な場合に 400 を返す。
   void getOutlaysByDate_shouldReturnBadRequest_whenInvalidDateFormat() throws Exception {
     // Given
     String invalidDate = "invalid-date";
@@ -243,6 +257,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 正常系：既存データを更新すると 200 と更新内容を返す。
   void updateOutlay_shouldUpdateExistingOutlay() throws Exception {
     // Given
     Outlay updatedOutlay = Outlay.create("Updated Lunch", 1500);
@@ -267,6 +282,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 異常系：更新対象が存在しない場合に 404 とメッセージを返す。
   void updateOutlay_shouldReturnNotFound_whenOutlayDoesNotExist() throws Exception {
     // Given
     when(outlayRepository.findById(99)).thenReturn(Optional.empty());
@@ -282,10 +298,11 @@ public class OutlayControllerTest {
     // Then
     result
         .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.message").value("更新に失敗しました。指定されたIDの出費データは存在しません。"));
+        .andExpect(jsonPath("$.message").value("指定されたIDの出費データは存在しません。"));
   }
 
   @Test
+  // 異常系：更新リクエストがバリデーションに失敗した場合に 400 を返す。
   void updateOutlay_shouldReturnBadRequest_whenValidationFails() throws Exception {
     // Given
     when(outlayRepository.findById(1)).thenReturn(Optional.of(outlay1));
@@ -303,6 +320,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 正常系：削除対象が存在する場合に 204 を返し、リポジトリから削除される。
   void deleteOutlay_shouldDeleteOutlay_whenExists() throws Exception {
     // Given
     when(outlayRepository.existsById(1)).thenReturn(true);
@@ -317,6 +335,7 @@ public class OutlayControllerTest {
   }
 
   @Test
+  // 異常系：削除対象が存在しない場合に 404 とメッセージを返す。
   void deleteOutlay_shouldReturnNotFound_whenOutlayDoesNotExist() throws Exception {
     // Given
     when(outlayRepository.existsById(99)).thenReturn(false);
@@ -327,6 +346,6 @@ public class OutlayControllerTest {
     // Then
     result
         .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.message").value("削除に失敗しました。指定されたIDの出費データは存在しません。"));
+        .andExpect(jsonPath("$.message").value("指定されたIDの出費データは存在しません。"));
   }
 }
