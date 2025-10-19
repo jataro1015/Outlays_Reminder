@@ -1,23 +1,5 @@
 package jataro.web.outlays_reminder.controller;
 
-import static jataro.web.outlays_reminder.constants.ErrorMessages.INVALID_DATE_FORMAT;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.INVALID_INPUT;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.INVALID_REQUEST_BODY_TYPE;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_CREATION_FAILED;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_DELETE_ERROR;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_FETCH_BY_DATE_ERROR;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_FETCH_BY_ID_ERROR;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_FETCH_ERROR;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_NOT_FOUND_BY_DATE;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_NOT_FOUND_BY_ID;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_UPDATE_ERROR;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAYS_NOT_FOUND;
-import static jataro.web.outlays_reminder.constants.ErrorMessages.REQUEST_PARAMETER_INVALID;
-
-import jakarta.validation.Valid;
-import jataro.web.outlays_reminder.dto.OutlayRequest;
-import jataro.web.outlays_reminder.entity.Outlay;
-import jataro.web.outlays_reminder.repository.OutlayRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -25,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +32,24 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.HtmlUtils;
 
+import jakarta.validation.Valid;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.INVALID_DATE_FORMAT;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.INVALID_INPUT;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.INVALID_REQUEST_BODY_TYPE;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAYS_NOT_FOUND;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_CREATION_FAILED;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_DELETE_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_FETCH_BY_DATE_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_FETCH_BY_ID_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_FETCH_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_NOT_FOUND_BY_DATE;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_NOT_FOUND_BY_ID;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_UPDATE_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.REQUEST_PARAMETER_INVALID;
+import jataro.web.outlays_reminder.dto.OutlayRequest;
+import jataro.web.outlays_reminder.entity.Outlay;
+import jataro.web.outlays_reminder.repository.OutlayRepository;
+
 @RestController
 @RequestMapping("/api/v1/outlays")
 @CrossOrigin
@@ -64,8 +65,9 @@ public final class OutlayController {
   public ResponseEntity<?> registerOutlay(
       @Valid @RequestBody final OutlayRequest request, final BindingResult result) {
 
-    if (handleValidationErrors(result).isPresent()) {
-      return handleValidationErrors(result).get();
+    final var errors = handleValidationErrors(result);
+    if (errors.isPresent()) {
+      return errors.get();
     }
 
     try {
@@ -164,13 +166,13 @@ public final class OutlayController {
       final BindingResult result) {
 
     final Optional<Outlay> existingOutlay = outlayRepository.findById(id);
-
     if (existingOutlay.isEmpty()) {
       return createErrorResponse(OUTLAY_NOT_FOUND_BY_ID, HttpStatus.NOT_FOUND);
     }
 
-    if (handleValidationErrors(result).isPresent()) {
-      return handleValidationErrors(result).get();
+    final var errors = handleValidationErrors(result);
+    if (errors.isPresent()) {
+      return errors.get();
     }
 
     try {
