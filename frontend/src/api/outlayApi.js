@@ -26,3 +26,19 @@ export const getOutlays = async ({ sortBy, sortDirection, filterId, filterDate }
 
   return response.json();
 };
+
+export const deleteOutlay = async (id) => {
+  const response = await fetch(`/api/v1/outlays/${id}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    let err = null;
+    try {
+      err = await response.json();
+    } catch (e) {
+      // ignore JSON parsing errors for empty responses
+    }
+    throw new Error((err && err.message) || 'Failed to delete outlay');
+  }
+};
