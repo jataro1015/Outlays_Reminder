@@ -1,5 +1,7 @@
 # AGENTS.md
 
+Please provide all answers in Japanese
+
 **Rule:** In each command, **define → use**. Do **not** escape `$`. Use generic `'path/to/file.ext'`.
 
 ---
