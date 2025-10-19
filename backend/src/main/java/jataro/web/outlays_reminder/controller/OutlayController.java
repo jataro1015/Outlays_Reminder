@@ -1,5 +1,19 @@
 package jataro.web.outlays_reminder.controller;
 
+import static jataro.web.outlays_reminder.constants.ErrorMessages.INVALID_DATE_FORMAT;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.INVALID_INPUT;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.INVALID_REQUEST_BODY_TYPE;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_CREATION_FAILED;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_DELETE_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_FETCH_BY_DATE_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_FETCH_BY_ID_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_FETCH_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_NOT_FOUND_BY_DATE;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_NOT_FOUND_BY_ID;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAY_UPDATE_ERROR;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.OUTLAYS_NOT_FOUND;
+import static jataro.web.outlays_reminder.constants.ErrorMessages.REQUEST_PARAMETER_INVALID;
+
 import jakarta.validation.Valid;
 import jataro.web.outlays_reminder.dto.OutlayRequest;
 import jataro.web.outlays_reminder.entity.Outlay;
@@ -58,22 +72,21 @@ public final class OutlayController {
       final Outlay outlay = Outlay.create(request.getItem(), request.getAmount());
       final Outlay savedOutlay = outlayRepository.save(outlay);
 
-      // ★ 201 Created ステータスと JSON レスポンスを返す
       return ResponseEntity.created(
-              ServletUriComponentsBuilder.fromCurrentRequestUri() // 現在のリクエスト URI をベースに
-                  .path("/{id}") // ID をパスに追加
-                  .buildAndExpand(savedOutlay.getId()) // ID を展開して URI を作成
-                  .toUri()) // 作成されたリソースの URI を取得
-          .body(Map.of("id", savedOutlay.getId())); // レスポンスボディに ID を JSON 形式で含める
+              ServletUriComponentsBuilder.fromCurrentRequestUri()
+                  .path("/{id}")
+                  .buildAndExpand(savedOutlay.getId())
+                  .toUri())
+          .body(Map.of("id", savedOutlay.getId()));
 
     } catch (IllegalArgumentException e) {
-      return createErrorResponse("入力値が不正です。", HttpStatus.BAD_REQUEST, e);
+      return createErrorResponse(INVALID_INPUT, HttpStatus.BAD_REQUEST, e);
 
     } catch (ClassCastException e) {
-      return createErrorResponse("リクエストボディの型を合わせてください。", HttpStatus.BAD_REQUEST, e);
+      return createErrorResponse(INVALID_REQUEST_BODY_TYPE, HttpStatus.BAD_REQUEST, e);
 
     } catch (Exception e) {
-      return createErrorResponse("出費データ登録中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR, e);
+      return createErrorResponse(OUTLAY_CREATION_FAILED, HttpStatus.INTERNAL_SERVER_ERROR, e);
     }
   }
 
@@ -108,26 +121,25 @@ public final class OutlayController {
       final var outlays = outlayRepository.findAll(sort);
 
       return outlays.isEmpty()
-          ? createErrorResponse("出費データが存在しません", HttpStatus.NOT_FOUND)
+          ? createErrorResponse(OUTLAYS_NOT_FOUND, HttpStatus.NOT_FOUND)
           : ResponseEntity.ok(outlays);
 
     } catch (Exception e) {
-      return createErrorResponse("出費データ取得中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR, e);
+      return createErrorResponse(OUTLAY_FETCH_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, e);
     }
   }
 
   @GetMapping("/{id}")
   public ResponseEntity<?> getOutlayById(@PathVariable("id") final Integer id) {
     try {
-      final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
+      final Optional<Outlay> existingOutlay = outlayRepository.findById(id);
 
       return existingOutlay.isPresent()
           ? ResponseEntity.ok(existingOutlay.get())
-          : createErrorResponse("指定されたIDの出費データは存在しません。", HttpStatus.NOT_FOUND);
+          : createErrorResponse(OUTLAY_NOT_FOUND_BY_ID, HttpStatus.NOT_FOUND);
 
     } catch (Exception e) {
-      return createErrorResponse(
-          "ID指定による出費データ取得中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR, e);
+      return createErrorResponse(OUTLAY_FETCH_BY_ID_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, e);
     }
   }
 
@@ -138,10 +150,10 @@ public final class OutlayController {
       final List<Outlay> outlays = outlayRepository.findByCreatedAtDate(date);
 
       return outlays.isEmpty()
-          ? new ResponseEntity<>(Map.of("message", "指定された日付の出費データは存在しません。"), HttpStatus.NOT_FOUND)
+          ? createErrorResponse(OUTLAY_NOT_FOUND_BY_DATE, HttpStatus.NOT_FOUND)
           : ResponseEntity.ok(outlays);
     } catch (Exception e) {
-      return createErrorResponse("日付指定による出費データ取得中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR);
+      return createErrorResponse(OUTLAY_FETCH_BY_DATE_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, e);
     }
   }
 
@@ -151,10 +163,10 @@ public final class OutlayController {
       @Valid @RequestBody final OutlayRequest request,
       final BindingResult result) {
 
-    final Optional<Outlay> existingOutlay = outlayRepository.findById(id); // IDで既存の Outlay を検索
+    final Optional<Outlay> existingOutlay = outlayRepository.findById(id);
 
     if (existingOutlay.isEmpty()) {
-      return createErrorResponse("更新に失敗しました。指定されたIDの出費データは存在しません。", HttpStatus.NOT_FOUND);
+      return createErrorResponse(OUTLAY_NOT_FOUND_BY_ID, HttpStatus.NOT_FOUND);
     }
 
     if (handleValidationErrors(result).isPresent()) {
@@ -170,10 +182,7 @@ public final class OutlayController {
       return ResponseEntity.ok(updatedOutlay);
 
     } catch (Exception e) {
-      return createErrorResponse(
-          "出費データ更新中にサーバーエラーが発生しました。", // エラーメッセージをサーバーエラーに
-          HttpStatus.INTERNAL_SERVER_ERROR,
-          e);
+      return createErrorResponse(OUTLAY_UPDATE_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, e);
     }
   }
 
@@ -181,7 +190,7 @@ public final class OutlayController {
   public ResponseEntity<?> deleteOutlay(@PathVariable("id") final Integer id) {
     try {
       if (!outlayRepository.existsById(id)) {
-        return createErrorResponse("削除に失敗しました。指定されたIDの出費データは存在しません。", HttpStatus.NOT_FOUND);
+        return createErrorResponse(OUTLAY_NOT_FOUND_BY_ID, HttpStatus.NOT_FOUND);
       }
 
       outlayRepository.deleteById(id);
@@ -189,20 +198,16 @@ public final class OutlayController {
       return ResponseEntity.noContent().build();
 
     } catch (Exception e) {
-      return createErrorResponse(
-          "ID指定による出費データ削除中にエラーが発生しました。", HttpStatus.INTERNAL_SERVER_ERROR, e);
+      return createErrorResponse(OUTLAY_DELETE_ERROR, HttpStatus.INTERNAL_SERVER_ERROR, e);
     }
   }
 
-  // アノテーションにmessage属性がない場合、これで例外を捕捉する。
   @ExceptionHandler(MethodArgumentTypeMismatchException.class)
   public ResponseEntity<?> handleDateParseException(MethodArgumentTypeMismatchException ex) {
-    if (ex.getName().equals("date")) {
-      return new ResponseEntity<>(
-          Map.of("message", "日付の形式が正しくありません。YYYY-MM-DD の形式で入力してください。"), HttpStatus.BAD_REQUEST);
+    if ("date".equals(ex.getName())) {
+      return new ResponseEntity<>(Map.of("message", INVALID_DATE_FORMAT), HttpStatus.BAD_REQUEST);
     }
-    // 他の型変換エラーが発生した場合の処理 (必要に応じて)
-    return new ResponseEntity<>(Map.of("message", "リクエストパラメータの形式が不正です。"), HttpStatus.BAD_REQUEST);
+    return new ResponseEntity<>(Map.of("message", REQUEST_PARAMETER_INVALID), HttpStatus.BAD_REQUEST);
   }
 
   private Optional<ResponseEntity<?>> handleValidationErrors(final BindingResult result) {
@@ -213,7 +218,7 @@ public final class OutlayController {
                   Collectors.groupingBy(
                       FieldError::getField,
                       Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList())));
-      return Optional.ofNullable(new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST));
+      return Optional.of(new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST));
     }
     return Optional.empty();
   }
@@ -228,10 +233,9 @@ public final class OutlayController {
       final String message, final HttpStatus status, final Exception e) {
     if (e instanceof IllegalArgumentException || e instanceof ClassCastException) {
       logger.warn(message, e);
-
     } else {
       logger.error(message, e);
     }
-    return createErrorResponse(message, status); // メッセージとステータスコードのみのオーバーロードを呼び出す
+    return createErrorResponse(message, status);
   }
 }
