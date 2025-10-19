@@ -55,6 +55,6 @@ Write-Utf8NoBom -Path $file -Content ($old+"`nYOUR_TEXT_HERE`n")
 
 ## 要件ドキュメント
 - 【**backend, frontend共通**】実装を依頼された場合、必ず実装方針、具体的な改修手法を提案すること。
-- 既存のプロダクトコードやテストコードを改修する際は、必ず差分を提示し、承認を得ること。
+- 【**backend, frontend共通**】既存のプロダクトコードやテストコードを改修する際は、必ず差分を提示し、承認を得ること。
 - backend側の実装を行った場合、関連する単体テストを更新し、`.\gradlew :test`が**成功**するまで修正すること。
 - backend側のテストは、Given When Thenパターンで実装を行うこと。
