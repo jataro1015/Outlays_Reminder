@@ -27,6 +27,28 @@ export const getOutlays = async ({ sortBy, sortDirection, filterId, filterDate }
   return response.json();
 };
 
+export const updateOutlay = async (id, payload) => {
+  const response = await fetch(`/api/v1/outlays/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let err = null;
+    try {
+      err = await response.json();
+    } catch (e) {
+      // ignore JSON parsing errors for unexpected empty bodies
+    }
+    throw new Error((err && err.message) || 'Failed to update outlay');
+  }
+
+  return response.json();
+};
+
 export const deleteOutlay = async (id) => {
   const response = await fetch(`/api/v1/outlays/${id}`, {
     method: 'DELETE',
