@@ -1,0 +1,10 @@
+# Secrets & tokens
+token.json
+credentials.json
+
+# Local outputs
+outputs/
+
+# Python cache files
+__pycache__/
+*.pyc
