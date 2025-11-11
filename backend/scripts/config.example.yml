@@ -1,0 +1,17 @@
+default:
+  query: "subject:ご利用金額確定"
+  max_results: 10
+  output: "outputs/out.json"
+  use_keyring: true
+  keyring_service: "outlays-reminder-gmail-token"
+  keyring_username: "gmail-token"
+  use_credentials_keyring: true
+  credentials_keyring_service: "outlays-reminder-gmail-client"
+  credentials_keyring_username: "gmail-client"
+  labels:
+    - "カード明細"
+
+card_statement:
+  query: "from:noreply@example.com has:attachment"
+  max_results: 5
+  output: "outputs/card_statement.json"
