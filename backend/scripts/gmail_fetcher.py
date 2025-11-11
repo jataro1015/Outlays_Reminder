@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from dateutil import parser as date_parser
 from google.auth.transport.requests import Request
@@ -47,6 +47,17 @@ DEFAULT_CREDENTIALS_KEYRING_USERNAME = os.environ.get(
 )
 
 DEFAULT_CONFIG_PATH = Path("config.yml")
+ALLOWED_HEADER_NAMES: Set[str] = {
+    "from",
+    "to",
+    "cc",
+    "bcc",
+    "reply-to",
+    "subject",
+    "date",
+    "delivered-to",
+    "message-id",
+}
 CONFIG_KEYS = {
     "credentials",
     "token",
@@ -221,6 +232,12 @@ def load_config_profile(
     if not isinstance(data, dict):
         raise ValueError(f"設定ファイルの形式が不正です: {path}")
 
+    gmail_profiles = data.get("gmail_profiles")
+    if isinstance(gmail_profiles, dict):
+        return select_profile_from_map(
+            gmail_profiles, profile_name, label="gmailプロファイル"
+        )
+
     is_profile_map = not (set(data.keys()) & CONFIG_KEYS) and all(
         isinstance(value, dict) for value in data.values()
     )
@@ -259,6 +276,29 @@ def load_config_profile(
         profile_data = data
 
     return filter_config_keys(profile_data), selected_profile
+
+
+def select_profile_from_map(
+    profiles: Dict[str, Any], profile_name: Optional[str], *, label: str
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    """プロファイル辞書から名前を選択して返す。"""
+    target = profile_name
+    if target is None:
+        if "default" in profiles:
+            target = "default"
+        elif len(profiles) == 1:
+            target = next(iter(profiles.keys()))
+    if target is None:
+        available = ", ".join(profiles.keys())
+        raise ValueError(
+            f"{label}が複数定義されています。--profile で対象を指定してください。候補: {available}"
+        )
+    raw_profile = profiles.get(target)
+    if raw_profile is None:
+        raise ValueError(f"指定したプロファイルが見つかりません: {target}")
+    if not isinstance(raw_profile, dict):
+        raise ValueError(f"プロファイル {target} の構造が不正です。")
+    return filter_config_keys(raw_profile), target
 
 
 def parse_config_file(path: Path) -> Any:
@@ -521,18 +561,18 @@ def transform_raw_message(raw: Dict[str, object]) -> GmailMessage:
 
 
 def normalize_headers(headers: Iterable[Dict[str, str]]) -> Dict[str, List[str]]:
-    """各キーにリストを紐づけて辞書化する。"""
+    """ホワイトリストに含まれるヘッダーのみを辞書化する。"""
     normalized: Dict[str, List[str]] = {}
     for header in headers:
         name = header.get("name")
         value = header.get("value")
-        if name and value:
+        if name and value and name.lower() in ALLOWED_HEADER_NAMES:
             normalized.setdefault(name, []).append(value)
     return normalized
 
 
 def extract_body(payload: Dict[str, object]) -> str:
-    """マルチパートに対応しつつメッセージ本文のプレーンテキストを抽出する。"""
+    """text/plain パートのみを再帰的に抽出し、全文を返す。"""
     mime_type = payload.get("mimeType", "")
     body = payload.get("body", {}) or {}
 
@@ -541,6 +581,9 @@ def extract_body(payload: Dict[str, object]) -> str:
             text = extract_body(part)
             if text:
                 return text
+        return ""
+
+    if isinstance(mime_type, str) and not mime_type.startswith("text/plain"):
         return ""
 
     data = body.get("data")
