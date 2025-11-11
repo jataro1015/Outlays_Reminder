@@ -1,6 +1,8 @@
 # Secrets & tokens
 token.json
 credentials.json
+config.yml
+config.yaml
 
 # Local outputs
 outputs/

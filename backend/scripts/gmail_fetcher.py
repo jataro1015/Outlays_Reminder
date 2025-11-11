@@ -8,7 +8,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from dateutil import parser as date_parser
 from google.auth.transport.requests import Request
@@ -21,6 +21,11 @@ try:
     import keyring
 except ImportError:  # pragma: no cover - optional dependency guard
     keyring = None
+
+try:
+    import yaml
+except ImportError:  # pragma: no cover - optional dependency guard
+    yaml = None
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 ENV_TOKEN_KEYRING_SERVICE = "OUTLAYS_GMAIL_KEYRING_SERVICE"
@@ -40,6 +45,22 @@ DEFAULT_CREDENTIALS_KEYRING_SERVICE = os.environ.get(
 DEFAULT_CREDENTIALS_KEYRING_USERNAME = os.environ.get(
     ENV_CREDENTIALS_KEYRING_USERNAME, "gmail-client"
 )
+
+DEFAULT_CONFIG_PATH = Path("config.yml")
+CONFIG_KEYS = {
+    "credentials",
+    "token",
+    "query",
+    "labels",
+    "max_results",
+    "output",
+    "use_keyring",
+    "keyring_service",
+    "keyring_username",
+    "use_credentials_keyring",
+    "credentials_keyring_service",
+    "credentials_keyring_username",
+}
 
 
 @dataclass
@@ -66,10 +87,35 @@ class GmailMessage:
         }
 
 
-def parse_args() -> argparse.Namespace:
-    """CLI引数を定義し、ユーザー入力をパースした結果を返す。"""
+def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    """CLI引数を定義し、ユーザー入力 + 設定ファイルを統合した結果を返す。"""
+
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="設定ファイル (YAML/JSON)。未指定で config.yml があれば自動利用。",
+    )
+    config_parser.add_argument(
+        "--profile",
+        type=str,
+        default=None,
+        help="設定ファイル内のプロファイル名。未指定時はdefaultや単一エントリを選択。",
+    )
+
+    config_args, remaining = config_parser.parse_known_args(argv)
+    config_path = resolve_config_path(config_args.config)
+    config_defaults: Dict[str, Any] = {}
+    selected_profile: Optional[str] = None
+    if config_path:
+        config_defaults, selected_profile = load_config_profile(
+            config_path, config_args.profile
+        )
+
     parser = argparse.ArgumentParser(
-        description="Gmailからメールを取得してJSON形式で出力します。"
+        description="Gmailからメールを取得してJSON形式で出力します。",
+        parents=[config_parser],
     )
     parser.add_argument(
         "--credentials",
@@ -147,7 +193,119 @@ def parse_args() -> argparse.Namespace:
             f"(環境変数 {ENV_CREDENTIALS_KEYRING_USERNAME} でも指定可)"
         ),
     )
-    return parser.parse_args()
+
+    namespace = argparse.Namespace(**config_defaults)
+    args = parser.parse_args(remaining, namespace=namespace)
+
+    if config_path and not args.config:
+        args.config = config_path
+    if selected_profile and not args.profile:
+        args.profile = selected_profile
+
+    coerce_argument_types(args)
+    return args
+
+
+def resolve_config_path(explicit: Optional[Path]) -> Optional[Path]:
+    """明示指定がなければconfig.ymlを自動で探す。"""
+    if explicit:
+        return explicit
+    return DEFAULT_CONFIG_PATH if DEFAULT_CONFIG_PATH.exists() else None
+
+
+def load_config_profile(
+    path: Path, profile_name: Optional[str]
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    """設定ファイルから対象プロファイルの辞書を取得する。"""
+    data = parse_config_file(path)
+    if not isinstance(data, dict):
+        raise ValueError(f"設定ファイルの形式が不正です: {path}")
+
+    is_profile_map = not (set(data.keys()) & CONFIG_KEYS) and all(
+        isinstance(value, dict) for value in data.values()
+    )
+
+    selected_profile: Optional[str] = None
+    profile_data: Dict[str, Any]
+
+    if is_profile_map:
+        target = profile_name
+        if target is None:
+            if "default" in data:
+                target = "default"
+            elif len(data) == 1:
+                target = next(iter(data.keys()))
+        if target is None:
+            available = ", ".join(data.keys())
+            raise ValueError(
+                f"複数プロファイルが定義されています。--profile で対象を指定してください。候補: {available}"
+            )
+        raw_profile = data.get(target)
+        if raw_profile is None:
+            raise ValueError(f"指定したプロファイルが見つかりません: {target}")
+        if not isinstance(raw_profile, dict):
+            raise ValueError(f"プロファイル {target} の構造が不正です。")
+        selected_profile = target
+        profile_data = raw_profile
+    else:
+        if profile_name:
+            selected_profile = profile_name
+        elif "default" in data and isinstance(data["default"], dict):
+            selected_profile = "default"
+            profile_data = data["default"]
+            return filter_config_keys(profile_data), selected_profile
+        else:
+            selected_profile = profile_name or "default"
+        profile_data = data
+
+    return filter_config_keys(profile_data), selected_profile
+
+
+def parse_config_file(path: Path) -> Any:
+    """YAML/JSONファイルを読み込んでPythonオブジェクトへ変換する。"""
+    if not path.exists():
+        raise FileNotFoundError(f"設定ファイルが見つかりません: {path}")
+    content = path.read_text(encoding="utf-8")
+    suffix = path.suffix.lower()
+    if suffix in {".yml", ".yaml"}:
+        ensure_yaml_available()
+        return yaml.safe_load(content) or {}
+    if suffix == ".json":
+        return json.loads(content or "{}")
+
+    # 拡張子なしの場合はYAML→JSONの順でトライ
+    try:
+        ensure_yaml_available()
+        return yaml.safe_load(content) or {}
+    except Exception:
+        return json.loads(content or "{}")
+
+
+def filter_config_keys(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """許可されたキーのみを抽出して返す。"""
+    return {key: raw[key] for key in CONFIG_KEYS if key in raw}
+
+
+def coerce_argument_types(args: argparse.Namespace) -> None:
+    """設定ファイルからの値をPathやlistなど適切な型へ変換する。"""
+
+    def ensure_path(value: Optional[Path]) -> Optional[Path]:
+        if value is None or isinstance(value, Path):
+            return value
+        return Path(value)
+
+    args.credentials = ensure_path(args.credentials)
+    args.token = ensure_path(args.token)
+    args.output = ensure_path(args.output)
+    args.config = ensure_path(args.config)
+
+    if isinstance(args.labels, str):
+        args.labels = [args.labels]
+    elif args.labels is not None:
+        args.labels = list(args.labels)
+
+    if args.max_results is not None:
+        args.max_results = int(args.max_results)
 
 
 def load_credentials(
@@ -282,6 +440,15 @@ def ensure_keyring_available() -> None:
         )
 
 
+def ensure_yaml_available() -> None:
+    """PyYAMLが入っていない場合に明示的に案内する。"""
+    if yaml is None:
+        raise RuntimeError(
+            "YAML設定ファイルを利用するには PyYAML が必要です。"
+            "`poetry install` を実行して依存を導入してください。"
+        )
+
+
 def list_message_refs(
     service,
     *,
@@ -413,6 +580,7 @@ def dump_messages(messages: Sequence[GmailMessage], output_path: Optional[Path])
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json_text, encoding="utf-8")
+        print(f"{len(messages)}件のメールを {output_path} に書き出しました。")
     else:
         print(json_text)
 
