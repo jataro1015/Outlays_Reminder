@@ -1,17 +1,37 @@
-default:
-  query: "subject:ご利用金額確定"
-  max_results: 10
-  output: "outputs/out.json"
-  use_keyring: true
-  keyring_service: "outlays-reminder-gmail-token"
-  keyring_username: "gmail-token"
-  use_credentials_keyring: true
-  credentials_keyring_service: "outlays-reminder-gmail-client"
-  credentials_keyring_username: "gmail-client"
-  labels:
-    - "カード明細"
+gmail_profiles:
+  default:
+    query: "subject:ご利用金額確定"
+    max_results: 10
+    output: "outputs/out.json"
+    use_keyring: true
+    keyring_service: "outlays-reminder-gmail-token"
+    keyring_username: "gmail-token"
+    use_credentials_keyring: true
+    credentials_keyring_service: "outlays-reminder-gmail-client"
+    credentials_keyring_username: "gmail-client"
+    labels:
+      - "カード明細"
 
-card_statement:
-  query: "from:noreply@example.com has:attachment"
-  max_results: 5
-  output: "outputs/card_statement.json"
+  notification_only:
+    query: "subject:仮登録"
+    max_results: 5
+    output: "outputs/notification.json"
+    use_keyring: true
+    keyring_service: "outlays-reminder-gmail-token"
+    keyring_username: "gmail-token"
+    use_credentials_keyring: true
+    credentials_keyring_service: "outlays-reminder-gmail-client"
+    credentials_keyring_username: "gmail-client"
+
+ingest_profiles:
+  default:
+    input_json: "outputs/out.json"
+    api_base_url: "http://localhost:8080/api/v1/outlays"
+    headers:
+      Content-Type: "application/json"
+    item_field: "subject"      # subject | snippet | body
+    amount_source: "body"      # subject | snippet | body
+    amount_pattern: "([0-9,]+)円"
+    min_amount: 1
+    skip_without_amount: true
+    dry_run: false
