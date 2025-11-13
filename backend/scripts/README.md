@@ -104,20 +104,6 @@ Poetry コマンドを毎回入力したくない場合は `run_gmail_fetcher.ps
 
 ---
 
-## 月次 Gmail プロファイル生成スクリプト (`monthly_gmail_config_builder.py`)
-毎日 1 回のバッチなどで「当月1日〜末日（= 翌月1日未満）」のメールを取得したい場合は、`gmail_fetcher.py` 実行前に本スクリプトで `config.yml` を更新してください。`gmail_profiles.one_month.query` のベース条件（例: `subject:金額`）から `after:{当月1日}` `before:{翌月1日}` を自動付与します。
-```powershell
-poetry run python monthly_gmail_config_builder.py `
-  --config config.yml `
-  --profile one_month `
-  --base-query "subject:金額"
-```
-- `--base-query` を省略すると、直前の `query` から `after/before` 句を除去したものを再利用します。
-- `--dry-run` を付けると書き込みを行わず、生成されるクエリだけを確認できます。
-- Gmail の `before:` は終端日を含まないため、翌月1日を指定しても当月末日 23:59:59 までが対象になります。
-タスクスケジューラ等で自動化する場合は「`monthly_gmail_config_builder.py` → `gmail_fetcher.py --profile one_month`」の順で実行してください。
----
-
 ## Outlay API 連携スクリプト (`import_outlays.py`)
 
 `gmail_fetcher` が出力した JSON を読み取り、バックエンドの `/api/v1/outlays` へ自動登録します。
