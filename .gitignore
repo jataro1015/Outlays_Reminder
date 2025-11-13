@@ -9,6 +9,11 @@ outlays.trace.db
 .vscode/
 settings.gradle
 
+.settings/
+backend/.settings/
+.classpath
+/backend/.classpath
+
 # Compiled class file
 *.class
 
