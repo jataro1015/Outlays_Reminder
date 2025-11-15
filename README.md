@@ -94,14 +94,11 @@ npm start
 
 2. **フロントエンド**
    ```bash
-    cd frontend
-    npm install
-    npm start
-    ```
-    `http://localhost:3000` を開き、支出登録／検索／更新／削除を確認。
-
-### Dummy change for CI guard verification
-ブランチ保護・CIガードを検証するためのダミーセクションです。
+   cd frontend
+   npm install
+   npm start
+   ```
+   `http://localhost:3000` を開き、支出登録／検索／更新／削除を確認。
 
 3. **Gmail / API 連携スクリプト（任意）**
    ```bash
