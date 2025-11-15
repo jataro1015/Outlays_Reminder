@@ -1,26 +1,10 @@
 package jataro.web.outlays_reminder.controller;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -29,9 +13,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import jataro.web.outlays_reminder.entity.Outlay;
 import jataro.web.outlays_reminder.repository.OutlayRepository;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 @WebMvcTest(OutlayController.class)
 // OutlayController の REST エンドポイントを MockMvc で網羅的に検証するテストクラス。
@@ -89,9 +87,7 @@ public class OutlayControllerTest {
     ResultActions result = mockMvc.perform(get("/api/v1/outlays"));
 
     // Then
-    result
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.message").value("出費データが存在しません"));
+    result.andExpect(status().isNotFound()).andExpect(jsonPath("$.message").value("出費データが存在しません"));
   }
 
   @Test
@@ -102,8 +98,7 @@ public class OutlayControllerTest {
     when(outlayRepository.findAll(Sort.by(Sort.Direction.ASC, "item"))).thenReturn(sortedOutlays);
 
     // When
-    ResultActions result =
-        mockMvc.perform(get("/api/v1/outlays?sortBy=item&sortDirection=asc"));
+    ResultActions result = mockMvc.perform(get("/api/v1/outlays?sortBy=item&sortDirection=asc"));
 
     // Then
     result
@@ -121,8 +116,7 @@ public class OutlayControllerTest {
         .thenReturn(sortedOutlays);
 
     // When
-    ResultActions result =
-        mockMvc.perform(get("/api/v1/outlays?sortBy=amount&sortDirection=desc"));
+    ResultActions result = mockMvc.perform(get("/api/v1/outlays?sortBy=amount&sortDirection=desc"));
 
     // Then
     result
@@ -149,9 +143,7 @@ public class OutlayControllerTest {
                 .content(outlayRequestJson));
 
     // Then
-    result
-        .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.id").value(newOutlay.getId()));
+    result.andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(newOutlay.getId()));
   }
 
   @Test
@@ -252,8 +244,7 @@ public class OutlayControllerTest {
     // Then
     result
         .andExpect(status().isBadRequest())
-        .andExpect(
-            jsonPath("$.message").value("日付の形式が正しくありません。YYYY-MM-DD の形式で入力してください。"));
+        .andExpect(jsonPath("$.message").value("日付の形式が正しくありません。YYYY-MM-DD の形式で入力してください。"));
   }
 
   @Test
