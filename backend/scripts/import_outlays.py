@@ -5,6 +5,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -30,6 +31,7 @@ class IngestSettings:
     skip_without_amount: bool
     dry_run: bool
     limit: Optional[int] = None
+    success_output: Optional[Path] = None
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
@@ -71,6 +73,12 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         type=int,
         default=None,
         help="処理する最大件数。先頭からlimit件のみを対象にする。",
+    )
+    parser.add_argument(
+        "--success-output",
+        type=Path,
+        default=None,
+        help="APIに登録できたデータのJSONを書き出すパスを上書きします。",
     )
     return parser.parse_args(argv)
 
@@ -192,11 +200,24 @@ def build_settings(args: argparse.Namespace, profile_data: Dict[str, Any]) -> In
     item_field = str(profile_data.get("item_field", "subject"))
     amount_source = str(profile_data.get("amount_source", "body"))
     amount_pattern = str(
-        profile_data.get("amount_pattern", r"([0-9,]+)円")
+        profile_data.get("amount_pattern", r"([0-9,]+)(?:円|￥|¥)")
     ).strip()
     min_amount = int(profile_data.get("min_amount", 1))
     skip_without_amount = bool(profile_data.get("skip_without_amount", True))
     dry_run = args.dry_run or bool(profile_data.get("dry_run", False))
+    success_output: Optional[Path] = None
+    success_output_raw = (
+        args.success_output
+        or profile_data.get("success_output_json")
+        or profile_data.get("success_output")
+        or profile_data.get("export_success_json")
+    )
+    if success_output_raw:
+        success_output = (
+            success_output_raw
+            if isinstance(success_output_raw, Path)
+            else Path(str(success_output_raw))
+        )
 
     return IngestSettings(
         input_json=input_json,
@@ -209,6 +230,7 @@ def build_settings(args: argparse.Namespace, profile_data: Dict[str, Any]) -> In
         skip_without_amount=skip_without_amount,
         dry_run=dry_run,
         limit=args.limit,
+        success_output=success_output,
     )
 
 
@@ -227,6 +249,8 @@ def ingest_messages(messages: List[Dict[str, Any]], settings: IngestSettings) ->
     """各メールを解析し、APIへ登録するメインループ。"""
     compiled_pattern = re.compile(settings.amount_pattern)
     total = success = skipped = failed = 0
+    export_records: List[Dict[str, Any]] = []
+    can_export = settings.success_output is not None and not settings.dry_run
 
     for message in messages:
         if settings.limit is not None and total >= settings.limit:
@@ -266,6 +290,10 @@ def ingest_messages(messages: List[Dict[str, Any]], settings: IngestSettings) ->
 
         if 200 <= response.status_code < 300:
             success += 1
+            if can_export:
+                export_records.append(
+                    build_success_record(message, item, amount)
+                )
         else:
             failed += 1
             detail = safe_extract_error(response)
@@ -278,6 +306,12 @@ def ingest_messages(messages: List[Dict[str, Any]], settings: IngestSettings) ->
         f"処理完了 total={total}, success={success}, skipped={skipped}, failed={failed}."
         + (" (DRY RUN)" if settings.dry_run else "")
     )
+    if can_export:
+        export_success_records(settings.success_output, export_records, total=total)
+    elif settings.success_output and settings.dry_run:
+        print(
+            f"dry-runのため {settings.success_output} への成功データ出力はスキップしました。"
+        )
     return 0 if failed == 0 else 2
 
 
@@ -331,6 +365,34 @@ def safe_extract_error(response: requests.Response) -> str:
         return json.dumps(data, ensure_ascii=False)
     except ValueError:
         return response.text
+
+
+def build_success_record(message: Dict[str, Any], item: str, amount: int) -> Dict[str, Any]:
+    """API登録に成功したレコードをJSONへ書き出すフォーマットへ整形する。"""
+    return {
+        "item": item,
+        "amount": amount,
+        "message_id": str(message.get("id") or ""),
+        "thread_id": str(message.get("threadId") or ""),
+        "imported_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def export_success_records(
+    path: Optional[Path], records: List[Dict[str, Any]], *, total: int
+) -> None:
+    """成功したレコード一覧をJSONファイルへ保存する。"""
+    if path is None:
+        return
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "total_messages": total,
+        "exported": len(records),
+        "items": records,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"API登録済みデータを {path} に出力しました。")
 
 
 if __name__ == "__main__":

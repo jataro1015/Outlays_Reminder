@@ -3,6 +3,7 @@ gmail_profiles:
     query: "subject:ご利用金額確定"
     max_results: 10
     output: "outputs/out.json"
+    daily_output_template: "outputs/gmail_{profile}_{date}.json"
     use_keyring: true
     keyring_service: "outlays-reminder-gmail-token"
     keyring_username: "gmail-token"
@@ -16,6 +17,7 @@ gmail_profiles:
     query: "subject:仮登録"
     max_results: 5
     output: "outputs/notification.json"
+    daily_output_template: "outputs/gmail_notification_{date}.json"
     use_keyring: true
     keyring_service: "outlays-reminder-gmail-token"
     keyring_username: "gmail-token"
@@ -31,7 +33,23 @@ ingest_profiles:
       Content-Type: "application/json"
     item_field: "subject"      # subject | snippet | body
     amount_source: "body"      # subject | snippet | body
-    amount_pattern: "([0-9,]+)円"
+    amount_pattern: "([0-9,]+)(?:円|￥|¥)"
     min_amount: 1
     skip_without_amount: true
     dry_run: false
+    success_output_json: "outputs/imported_outlays.json"
+
+summary_profiles:
+  default:
+    input_json: "outputs/imported_outlays.json"
+    recipient: "your.email@example.com"
+    sender: "outlays-reminder@example.com"
+    subject: "[Outlays] 取り込みサマリー"
+    dry_run: true
+    state_file: "outputs/summary_state.json"
+    smtp:
+      host: "smtp.example.com"
+      port: 587
+      username: "your-smtp-user"
+      password: "your-smtp-password"
+      use_tls: true
