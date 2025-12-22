@@ -272,25 +272,26 @@ def compute_monthly_diff(
     current_month = settings.target_date.strftime("%Y-%m")
     profile_state = profiles.get(settings.profile_name) or {}
     if profile_state.get("year_month") == current_month:
-        prev_count = int(profile_state.get("count", 0))
-        prev_amount = int(profile_state.get("amount", 0))
+        cumulative_count = int(profile_state.get("count", 0))
+        cumulative_amount = int(profile_state.get("amount", 0))
     else:
-        prev_count = 0
-        prev_amount = 0
-    diff_count = count - prev_count
-    diff_amount = total_amount - prev_amount
+        cumulative_count = 0
+        cumulative_amount = 0
+
+    new_total_count = cumulative_count + count
+    new_total_amount = cumulative_amount + total_amount
 
     updated_profiles = dict(profiles)
     updated_profiles[settings.profile_name] = {
         "year_month": current_month,
-        "count": count,
-        "amount": total_amount,
+        "count": new_total_count,
+        "amount": new_total_amount,
     }
     updated_state = dict(state)
     updated_state["profiles"] = updated_profiles
     return DiffResult(
-        diff_count=diff_count,
-        diff_amount=diff_amount,
+        diff_count=new_total_count,
+        diff_amount=new_total_amount,
         year_month=current_month,
         state_payload=updated_state,
     )
