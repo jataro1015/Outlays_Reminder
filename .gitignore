@@ -9,6 +9,9 @@ outlays.trace.db
 .vscode/
 settings.gradle
 
+### Claude Code ###
+.claude/settings.local.json
+
 .settings/
 backend/.settings/
 .classpath
