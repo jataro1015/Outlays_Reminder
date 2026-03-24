@@ -8,8 +8,6 @@ pipx install poetry   # または任意の方法でPoetryを導入
 poetry install
 ```
 
----
-
 ## 設定ファイル (`config.yml`)
 
 `config.example.yml` をコピーして `config.yml` を作成します。トップレベルに `gmail_profiles` と `ingest_profiles` を持ち、それぞれのプロファイルを `--profile` で切り替えて利用します。
@@ -104,6 +102,22 @@ Poetry コマンドを毎回入力したくない場合は `run_gmail_fetcher.ps
 
 ---
 
+## 日次取得ラッパ (`daily_gmail_fetcher.py`)
+
+- `gmail_fetcher.py` のベースクエリを利用しつつ、指定した日付レンジ (`after`/`before`) や日付入りファイル名を自動で組み立てます。
+- 既定では「前日0:00〜当日0:00」の1日分を対象にし、`outputs/gmail_{profile}_{YYYYMMDD}.json` に保存します。
+- `--target-date` / `--range-days` / `--output-template` で対象日やファイル名、プレースホルダを柔軟に調整できます。
+
+```powershell
+poetry run python -m daily_gmail_fetcher `
+  --config config.yml `
+  --profile default `
+  --target-date 2025-03-26
+```
+
+日次取得後は、生成された JSON を `import_outlays.py --input` / `--success-output` に渡して差分登録し、同じファイルを `summary_mailer.py --input` へ繋ぐ運用が簡単です。
+
+---
 ## 月次 Gmail プロファイル生成スクリプト (`monthly_gmail_config_builder.py`)
 毎日 1 回のバッチなどで「当月1日〜末日（= 翌月1日未満）」のメールを取得したい場合は、`gmail_fetcher.py` 実行前に本スクリプトで `config.yml` を更新してください。`gmail_profiles.one_month.query` のベース条件（例: `subject:金額`）から `after:{当月1日}` `before:{翌月1日}` を自動付与します。
 ```powershell
@@ -137,17 +151,38 @@ poetry run python -m import_outlays `
 - 件名/本文などから `item` を生成し、正規表現 (`amount_pattern`) で金額を抽出。
 - `--dry-run` で API を呼ばずに動作確認。
 - `--limit` で先頭 N 件のみ処理。
+- `success_output_json` (デフォルト: `outputs/imported_outlays.json`) を設定すると、API登録に成功したデータをJSONとして保存できます。
 - 失敗した API 呼び出しはステータスとレスポンス本文を標準エラーへ出力。
 
 CLI オプションで `--input`, `--api-base-url`, `--dry-run`, `--limit` を上書きできます。
+
+## サマリーメール送信 (`summary_mailer.py`)
+
+- `import_outlays.py` が出力した `success_output_json` を読み込み、件数と合計金額を集計してメール本文を組み立てます。
+- 送信先・件名・本文テンプレートは `summary_profiles` で管理し、`--recipient` などで上書き可能です。
+- SMTP 認証情報は `summary_profiles.smtp` に `host` / `port` / `username` / `password` / `use_tls` / `use_ssl` / `timeout` を設定してください。
+- 既定では `dry_run: true` なので内容を確認し、`--send` または設定で `dry_run: false` にして本送信してください。
+- 月次差分を表示したい場合は `summary_profiles.*.state_file` に JSON ファイルパスを指定し、`--target-date YYYY-MM-DD`（日次ジョブで渡す対象日）を付与してください。月が変わると自動的にリセットされます。
+- `--state-file` で state ファイルパスを一時的に差し替えることも可能です。
+
+```powershell
+poetry run python -m summary_mailer `
+  --config config.yml `
+  --profile default `
+  --target-date 2025-03-27 `
+  --send
+```
 
 ---
 
 ## 推奨ワークフロー
 
-1. `poetry run python -m gmail_fetcher --profile default` で最新メールを `outputs/out.json` に書き出す。
-2. 内容を確認後、`poetry run python -m import_outlays --profile default` を実行してバックエンドへ連携。必要なら `--dry-run` で事前確認。
-3. タスクスケジューラ等で `run_gmail_fetcher.ps1` と `import_outlays.py` を組み合わせれば、完全自動化も可能です。
+1. `poetry run python -m daily_gmail_fetcher --profile default --target-date $(Get-Date -Format yyyy-MM-dd)` で前日分のメールを `outputs/gmail_default_YYYYMMDD.json` に保存。
+2. `poetry run python -m import_outlays --profile default --input outputs/gmail_default_YYYYMMDD.json --success-output outputs/imported_outlays_YYYYMMDD.json` を実行し、当日分だけAPIへ登録。
+3. `poetry run python -m summary_mailer --profile default --input outputs/imported_outlays_YYYYMMDD.json --target-date YYYY-MM-DD --send` でサマリー＋月次差分を通知（必要に応じて `--dry-run` で確認）。
+4. タスクスケジューラ等で `daily_gmail_fetcher.py` → `import_outlays.py` → `summary_mailer.py` の順に実行すれば、日次処理を自動化できる。
+
+
 
 ---
 

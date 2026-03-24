@@ -73,8 +73,10 @@ npm start
 
 ## Gmail / Outlay スクリプト (`backend/scripts/`)
 
-- `gmail_fetcher.py`: Gmail API で指定クエリのメール本文・ヘッダーを JSON 出力。
-- `import_outlays.py`: `gmail_fetcher` の JSON を解析し、`/api/v1/outlays` へ登録。正規表現で金額抽出、`--dry-run` で検証可。
+- `gmail_fetcher.py`: Gmail API で指定ラベルのメール件名/ヘッダーを JSON 出力。
+- `daily_gmail_fetcher.py`: `gmail_fetcher` の条件に日付レンジと日付付きファイル名を付与して実行するラッパ。
+- `import_outlays.py`: `gmail_fetcher` の JSON を読み込み、`/api/v1/outlays` へ登録。必要に応じて `--dry-run` で確認。
+- `summary_mailer.py`: `import_outlays.py` の成功レコードJSONを読み込み、件数・合計金額に月次差分を添えてメール送信（stateファイル + `--target-date`）。
 - `config.yml` の `gmail_profiles` / `ingest_profiles` でプロファイルを管理し、`--config` / `--profile` で切替。
 - Keyring（Windows 資格情報マネージャー等）に `token.json` / `credentials.json` を移して、`--use-keyring` / `--use-credentials-keyring` でファイルレス運用。
 - PowerShell ラッパー `run_gmail_fetcher.ps1` で定期実行しやすい構成。
