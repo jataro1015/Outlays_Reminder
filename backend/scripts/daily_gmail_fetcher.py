@@ -6,7 +6,7 @@ import subprocess
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import gmail_fetcher
 
@@ -71,6 +71,11 @@ def main() -> int:
     )
     profile_name = profile_name or "default"
 
+    raw_config = gmail_fetcher.parse_config_file(config_path)
+    gmail_profiles = raw_config.get("gmail_profiles") or {}
+    raw_profile = gmail_profiles.get(profile_name) or {}
+    daily_output_template_from_config = raw_profile.get("daily_output_template")
+
     target_start = determine_target_date(args.target_date)
     target_end = target_start + timedelta(days=max(1, args.range_days))
 
@@ -82,8 +87,7 @@ def main() -> int:
     query = build_query(base_query, target_start, target_end)
 
     output_path = determine_output_path(
-        args.output_template,
-        profile_data,
+        args.output_template or daily_output_template_from_config,
         profile_name,
         target_start,
         target_end,
@@ -128,13 +132,12 @@ def build_query(base_query: str, start: date, end: date) -> str:
 
 def determine_output_path(
     template: Optional[str],
-    profile_data: Dict[str, Any],
     profile_name: str,
     start: date,
     end: date,
 ) -> Path:
     # 設定ファイルにテンプレートが書かれていれば優先
-    pattern = template or profile_data.get("daily_output_template")
+    pattern = template
     context = {
         "profile": profile_name,
         "date": start.strftime("%Y%m%d"),
